@@ -6,16 +6,16 @@ const config = require('../lib/config');
 // All dynamic values passed in here must already be escaped by the caller
 // via escapeHtml() where they originate from user/VM data.
 
-// The tool's own display name, distinct from the lowercase package/repo slug
-// ("nodevboxadmin") - used where the product identity itself should be
-// spelled out (e.g. the login page), separately from BRAND_NAME below.
+// The tool's own display name - always shown (in the nav brand, every page's
+// <title>, and the login page) so it's clear what tool this is regardless of
+// whether an instance name is set.
 const PRODUCT_NAME = 'NodeVboxAdmin';
 
-// Shown in the nav brand and appended to every page's <title> - defaults to
-// the plain app name, or config.INSTANCE_NAME if set (see lib/config.js) so
-// multiple instances against different VirtualBox hosts stay distinguishable
-// in browser tabs/bookmarks.
-const BRAND_NAME = config.INSTANCE_NAME || 'nodevboxadmin';
+// PRODUCT_NAME, plus config.INSTANCE_NAME appended if set (see
+// lib/config.js) - so multiple instances against different VirtualBox hosts
+// stay distinguishable in browser tabs/bookmarks, without losing which tool
+// it actually is.
+const BRAND_NAME = config.INSTANCE_NAME ? `${PRODUCT_NAME} — ${config.INSTANCE_NAME}` : PRODUCT_NAME;
 const REPO_URL = 'https://github.com/dodoslavn/nodevboxadmin';
 
 function escapeHtml(value) {
@@ -151,4 +151,4 @@ function layout({ title, body, showNav = false, username = '' }) {
 </html>`;
 }
 
-module.exports = { layout, escapeHtml, PRODUCT_NAME, REPO_URL, INSTANCE_NAME: config.INSTANCE_NAME };
+module.exports = { layout, escapeHtml, PRODUCT_NAME, BRAND_NAME, REPO_URL };
