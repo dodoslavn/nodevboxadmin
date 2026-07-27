@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "setup-admin": "node bin/setup-admin.js"
+    "setup-admin": "node bin/setup-admin.js",
+    "set-instance-name": "node bin/set-instance-name.js"
   },
   "engines": {
     "node": ">=20"

@@ -106,7 +106,11 @@ async function main() {
     }
   }
 
-  const cred = auth.buildCredential(username, password);
+  // Merge onto the existing file rather than overwriting it outright - it
+  // may already hold an instanceName set via bin/set-instance-name.js, which
+  // a password reset shouldn't wipe out.
+  const existing = await store.readJson(config.CONFIG_FILE, {});
+  const cred = { ...existing, ...auth.buildCredential(username, password) };
   await store.writeJson(config.CONFIG_FILE, cred);
   console.log(`\nAdmin credential written to ${config.CONFIG_FILE}`);
   console.log(`Username: ${username}`);
