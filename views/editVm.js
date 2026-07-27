@@ -575,7 +575,7 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
     </div>
 
     <script src="/public/editVmTabs.js" defer></script>`;
-  return layout({ title: `Edit ${vm.name} — nodevboxadmin`, body, showNav: true, username });
+  return layout({ title: `Edit ${vm.name}`, body, showNav: true, username });
 }
 
 module.exports = {

@@ -114,7 +114,7 @@ function vmDetailPage({ vm, status, info = null, history = [], username = '', er
 
     <script src="/public/detail.js" defer></script>`;
 
-  return layout({ title: `${vm.displayName} — nodevboxadmin`, body, showNav: true, username });
+  return layout({ title: `${vm.displayName}`, body, showNav: true, username });
 }
 
 module.exports = { vmDetailPage };

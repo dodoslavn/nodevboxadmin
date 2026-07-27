@@ -1,8 +1,22 @@
 'use strict';
 
+const config = require('../lib/config');
+
 // Shared HTML shell + minimal CSS. Plain template literals, no engine.
 // All dynamic values passed in here must already be escaped by the caller
 // via escapeHtml() where they originate from user/VM data.
+
+// The tool's own display name, distinct from the lowercase package/repo slug
+// ("nodevboxadmin") - used where the product identity itself should be
+// spelled out (e.g. the login page), separately from BRAND_NAME below.
+const PRODUCT_NAME = 'NodeVboxAdmin';
+
+// Shown in the nav brand and appended to every page's <title> - defaults to
+// the plain app name, or config.INSTANCE_NAME if set (see lib/config.js) so
+// multiple instances against different VirtualBox hosts stay distinguishable
+// in browser tabs/bookmarks.
+const BRAND_NAME = config.INSTANCE_NAME || 'nodevboxadmin';
+const REPO_URL = 'https://github.com/dodoslavn/nodevboxadmin';
 
 function escapeHtml(value) {
   return String(value)
@@ -102,7 +116,7 @@ const BASE_CSS = `
 function layout({ title, body, showNav = false, username = '' }) {
   const nav = showNav
     ? `<header>
-         <span class="brand">nodevboxadmin</span>
+         <span class="brand">${escapeHtml(BRAND_NAME)}</span>
          <nav>
            <a href="/dashboard">Dashboard</a>
            &nbsp;|&nbsp;
@@ -127,7 +141,7 @@ function layout({ title, body, showNav = false, username = '' }) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)} — ${escapeHtml(BRAND_NAME)}</title>
   <style>${BASE_CSS}</style>
 </head>
 <body>
@@ -137,4 +151,4 @@ function layout({ title, body, showNav = false, username = '' }) {
 </html>`;
 }
 
-module.exports = { layout, escapeHtml };
+module.exports = { layout, escapeHtml, PRODUCT_NAME, REPO_URL, INSTANCE_NAME: config.INSTANCE_NAME };

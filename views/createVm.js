@@ -18,7 +18,7 @@ function createVmPage({ username = '', error = '', form = {} } = {}) {
         <button type="submit">Create VM</button>
       </form>
     </div>`;
-  return layout({ title: 'Create VM — nodevboxadmin', body, showNav: true, username });
+  return layout({ title: 'Create VM', body, showNav: true, username });
 }
 
 module.exports = { createVmPage };

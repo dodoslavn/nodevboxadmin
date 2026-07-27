@@ -138,6 +138,7 @@ server.js` directly.
 | `PORT` | `3000` | Must be 1-65535. |
 | `HOST` | `127.0.0.1` | Listen address. Only bind to something other than a loopback address if you know what's fronting it - see `TRUST_PROXY` below. |
 | `TRUST_PROXY` | `true` | Whether to trust the reverse proxy's `X-Forwarded-For` for rate-limiting. Set to `false` if the app is ever reachable directly (no Apache in front), otherwise a client can spoof its own rate-limit identity. |
+| `INSTANCE_NAME` | *(unset)* | Shown in the page title, nav header, and login page instead of the plain app name - set this (e.g. to the hypervisor's hostname or role) if you run more than one instance against different VirtualBox hosts, so browser tabs/bookmarks stay distinguishable. |
 | `VBOXMANAGE_BIN` | `VBoxManage` | Path to the VBoxManage binary, if not on `PATH`. |
 
 After changing `HOST`/`PORT`, restart the service (or the process) for it to

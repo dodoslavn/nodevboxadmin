@@ -60,7 +60,7 @@ function dashboardPage({ vms = [], username = '', vboxError = '' } = {}) {
     </div>
     <script src="/public/app.js" defer></script>`;
 
-  return layout({ title: 'Dashboard — nodevboxadmin', body, showNav: true, username });
+  return layout({ title: 'Dashboard', body, showNav: true, username });
 }
 
 module.exports = { dashboardPage };

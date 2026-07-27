@@ -178,7 +178,7 @@ function networksPage({
 
     <script src="/public/networks.js" defer></script>`;
 
-  return layout({ title: 'Networks — nodevboxadmin', body, showNav: true, username });
+  return layout({ title: 'Networks', body, showNav: true, username });
 }
 
 module.exports = { networksPage };

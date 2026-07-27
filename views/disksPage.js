@@ -95,7 +95,7 @@ function disksPage({ media = [], diskFormats = [], username = '', error = '', no
 
     <script src="/public/disks.js" defer></script>`;
 
-  return layout({ title: 'Virtual media — nodevboxadmin', body, showNav: true, username });
+  return layout({ title: 'Virtual media', body, showNav: true, username });
 }
 
 module.exports = { disksPage };

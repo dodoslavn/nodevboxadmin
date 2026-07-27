@@ -1,6 +1,6 @@
 'use strict';
 
-const { layout, escapeHtml } = require('./layout');
+const { layout, escapeHtml, PRODUCT_NAME, REPO_URL } = require('./layout');
 
 // Host diagnostics page: uptime, current time, OS/kernel version, VBox
 // version, and whether VirtualBox's kernel modules are loaded. Read-only -
@@ -62,6 +62,7 @@ function hostPage({ info, username = '' }) {
       ${requiredMissingBanner}
 
       <table class="kv">
+        <tr><th>Software</th><td><a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(PRODUCT_NAME)}</a> <span class="muted">(${escapeHtml(REPO_URL.replace('https://', ''))})</span></td></tr>
         <tr><th>Hostname</th><td>${escapeHtml(hostname)}</td></tr>
         <tr><th>Running as</th><td><code>${escapeHtml(runningAs)}</code> <span class="muted">(OS user this app's process runs under)</span></td></tr>
         <tr><th>Current time</th><td>${escapeHtml(now.toISOString())} <span class="muted">(${escapeHtml(timezone)})</span></td></tr>
@@ -81,7 +82,7 @@ function hostPage({ info, username = '' }) {
       </table>
     </div>`;
 
-  return layout({ title: 'Host status — nodevboxadmin', body, showNav: true, username });
+  return layout({ title: 'Host status', body, showNav: true, username });
 }
 
 module.exports = { hostPage };
