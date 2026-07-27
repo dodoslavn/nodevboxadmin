@@ -127,7 +127,23 @@ sudo reboot     # then re-check status + healthz
 
 ---
 
-## 5. Operations
+## 5. Configuration (environment variables)
+
+Set these in the systemd unit's `Environment=` lines (see
+`deploy/nodevboxadmin.service`) or export them before running `node
+server.js` directly.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `PORT` | `3000` | Must be 1-65535. |
+| `HOST` | `127.0.0.1` | Listen address. Only bind to something other than a loopback address if you know what's fronting it - see `TRUST_PROXY` below. |
+| `TRUST_PROXY` | `true` | Whether to trust the reverse proxy's `X-Forwarded-For` for rate-limiting. Set to `false` if the app is ever reachable directly (no Apache in front), otherwise a client can spoof its own rate-limit identity. |
+| `VBOXMANAGE_BIN` | `VBoxManage` | Path to the VBoxManage binary, if not on `PATH`. |
+
+After changing `HOST`/`PORT`, restart the service (or the process) for it to
+take effect - the app reads them once at startup.
+
+## 6. Operations
 
 | Task | Command |
 |---|---|
@@ -142,7 +158,7 @@ Backup: copy `/opt/nodevboxadmin/data/` (holds credential, registry, audit log).
 
 ---
 
-## 6. Caveats & troubleshooting
+## 7. Caveats & troubleshooting
 
 ### DKMS / kernel updates (IMPORTANT)
 VirtualBox's `vboxdrv` kernel module is built via DKMS. A Debian kernel update

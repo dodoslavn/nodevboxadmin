@@ -19,9 +19,12 @@ WorkingDirectory=/opt/nodevboxadmin
 ExecStart=/usr/bin/node /opt/nodevboxadmin/server.js
 Environment=NODE_ENV=production
 Environment=PORT=3000
-# Node binds to 127.0.0.1 only; Apache is the sole public entry point.
-# TRUST_PROXY defaults on (we sit behind Apache). Set to "false" ONLY if you
-# ever expose Node directly (you shouldn't).
+# Environment=HOST=127.0.0.1
+# Defaults to binding 127.0.0.1 only; Apache is the sole public entry point.
+# Uncomment HOST above (or set it) only if you need to bind elsewhere, and if
+# so make sure TRUST_PROXY reflects reality - it defaults on (we sit behind
+# Apache). Set to "false" if you ever expose Node directly without a proxy in
+# front of it (you shouldn't).
 # Environment=TRUST_PROXY=true
 
 Restart=on-failure
