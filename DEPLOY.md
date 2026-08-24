@@ -75,11 +75,14 @@ you do this.
 
 ```bash
 cd /path/to/where/you/cloned/nodevboxadmin
+cp config/config.json.example config/config.json   # required - app settings live here
 sudo ./config/systemd_install.sh              # runs as user "virtualbox" by default
 # or: sudo ./config/systemd_install.sh someuser
 ```
 
-No config file needed. It installs and starts a `nodevboxadmin.service`
+`systemd_install.sh` itself needs no config file (see section 2's argument
+above) - but the app won't start without `config/config.json` existing, so
+don't skip that copy step. It installs and starts a `nodevboxadmin.service`
 systemd unit that runs `node server.js` directly from this checkout
 (`WorkingDirectory` = the clone path), as the given OS user (its primary
 group is used as the unit's `Group=`). Creates `data/` (0700, owned by

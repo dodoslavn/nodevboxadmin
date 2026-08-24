@@ -39,6 +39,7 @@ dependencies at all) and drives everything through `VBoxManage`.
 ```bash
 git clone https://github.com/dodoslavn/nodevboxadmin
 cd nodevboxadmin
+cp config/config.json.example config/config.json   # required - app settings live here
 node config/password-reset.js   # sets the admin username/password
 node server.js            # listens on 127.0.0.1:3000 by default
 ```
