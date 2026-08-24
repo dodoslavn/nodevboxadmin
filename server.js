@@ -22,6 +22,7 @@ const { Router } = require('./lib/router');
 const auth = require('./lib/auth');
 const vmstatus = require('./lib/vmstatus');
 const vbox = require('./lib/vbox');
+const cloudinit = require('./lib/cloudinit');
 const audit = require('./lib/audit');
 const hostinfo = require('./lib/hostinfo');
 const { createLimiter } = require('./lib/ratelimit');
@@ -32,6 +33,7 @@ const { vmDetailPage } = require('./views/vmDetail');
 const { createVmPage } = require('./views/createVm');
 const { hostPage } = require('./views/hostPage');
 const { disksPage } = require('./views/disksPage');
+const { cloudInitPage } = require('./views/cloudInitPage');
 const { networksPage } = require('./views/networksPage');
 const {
   editVmPage,
@@ -292,6 +294,100 @@ router.post('/disks/:kind/:uuid/detach', async (req, res, params) => {
   } catch (err) {
     await audit.logAction({ action: 'disk-detach', vmName: null, result: 'error', message: err.message, actor: username });
     redirectWithFlash(res, '/disks', { error: `Could not detach: ${err.message}` });
+  }
+});
+
+// --- Cloud-Init (NoCloud seed ISO builder + saved template registry; see
+// lib/cloudinit.js. Generated ISOs are plain files, not yet known to
+// VirtualBox until attached to a VM - "mounting" one just reuses the
+// existing /vms/:uuid/storage/attach route via a pre-filled redirect,
+// see public/cloudinit.js) ---
+
+router.get('/cloud-init', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+  const query = new URL(req.url, 'http://localhost').searchParams;
+  let templates = [];
+  let isos = [];
+  let vms = [];
+  let error = query.get('error') || '';
+  try {
+    [templates, isos, vms] = await Promise.all([cloudinit.listTemplates(), cloudinit.listIsos(), vbox.listVms()]);
+  } catch (err) {
+    error = error || `Could not load Cloud-Init page: ${err.message}`;
+  }
+  html(
+    res,
+    cloudInitPage({
+      templates,
+      isos,
+      vms,
+      defaultTemplate: cloudinit.DEFAULT_TEMPLATE,
+      username,
+      error,
+      notice: query.get('notice') || '',
+    })
+  );
+});
+
+router.post('/cloud-init/templates/save', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const id = (body.id || '').trim() || undefined;
+  const name = (body.name || '').trim();
+  const userData = body.userData || '';
+
+  try {
+    const record = await cloudinit.saveTemplate({ id, name, userData });
+    await audit.logAction({ action: 'cloud-init-template-save', vmName: null, result: 'ok', message: record.name, actor: username });
+    redirectWithFlash(res, '/cloud-init', { notice: `Saved template "${record.name}".` });
+  } catch (err) {
+    await audit.logAction({ action: 'cloud-init-template-save', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/cloud-init', { error: `Could not save template: ${err.message}` });
+  }
+});
+
+router.post('/cloud-init/templates/:id/delete', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+  try {
+    await cloudinit.deleteTemplate(params.id);
+    await audit.logAction({ action: 'cloud-init-template-delete', vmName: null, result: 'ok', message: params.id, actor: username });
+    redirectWithFlash(res, '/cloud-init', { notice: 'Template deleted.' });
+  } catch (err) {
+    await audit.logAction({ action: 'cloud-init-template-delete', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/cloud-init', { error: `Could not delete template: ${err.message}` });
+  }
+});
+
+router.post('/cloud-init/build', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const outputName = (body.outputName || '').trim();
+  const userData = body.userData || '';
+
+  try {
+    const result = await cloudinit.buildIso({ userData, hostname: outputName, isoName: outputName });
+    await audit.logAction({ action: 'cloud-init-build', vmName: null, result: 'ok', message: result.filename, actor: username });
+    redirectWithFlash(res, '/cloud-init', { notice: `Generated ${result.filename}.` });
+  } catch (err) {
+    await audit.logAction({ action: 'cloud-init-build', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/cloud-init', { error: `Could not generate ISO: ${err.message}` });
+  }
+});
+
+router.post('/cloud-init/isos/:filename/delete', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+  try {
+    await cloudinit.deleteIso(params.filename);
+    await audit.logAction({ action: 'cloud-init-iso-delete', vmName: null, result: 'ok', message: params.filename, actor: username });
+    redirectWithFlash(res, '/cloud-init', { notice: `Deleted ${params.filename}.` });
+  } catch (err) {
+    await audit.logAction({ action: 'cloud-init-iso-delete', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/cloud-init', { error: `Could not delete ISO: ${err.message}` });
   }
 });
 
@@ -659,6 +755,7 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
       busPortRanges: vbox.BUS_PORT_RANGE, error: flashError, notice: flashNotice,
+      attachIso: query.get('attachIso') || '',
     }));
   } catch (err) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });

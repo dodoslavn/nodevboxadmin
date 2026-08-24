@@ -8,6 +8,8 @@
   "VBOXMANAGE_TIMEOUT_MS": 15000,
   "SCREENSHOT_TIMEOUT_MS": 20000,
   "VBOXNETADPCTL_BIN": "/usr/lib/virtualbox/VBoxNetAdpCtl",
+  "CLOUD_INIT_DIR": "data/cloud-init",
+  "CLOUD_LOCALDS_BIN": "cloud-localds",
   "SCRYPT_PARAMS": { "N": 16384, "r": 8, "p": 1 },
   "SCRYPT_KEYLEN": 64,
   "LOGIN_RATE": { "windowMs": 900000, "max": 10 },

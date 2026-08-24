@@ -46,11 +46,12 @@ const BASE_CSS = `
   }
   h1 { font-size: 1.3rem; margin-top: 0; }
   label { display: block; margin: 0.8rem 0 0.3rem; font-weight: 500; }
-  input[type=text], input[type=password], input[type=number] {
+  input[type=text], input[type=password], input[type=number], textarea {
     width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;
     font-size: 1rem;
   }
-  input[type=text]:focus, input[type=password]:focus, input[type=number]:focus, select:focus {
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; resize: vertical; }
+  input[type=text]:focus, input[type=password]:focus, input[type=number]:focus, select:focus, textarea:focus {
     outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   }
   select {
@@ -123,6 +124,8 @@ function layout({ title, body, showNav = false, username = '' }) {
            <a href="/vms/new">Create VM</a>
            &nbsp;|&nbsp;
            <a href="/disks">Disks</a>
+           &nbsp;|&nbsp;
+           <a href="/cloud-init">Cloud-Init</a>
            &nbsp;|&nbsp;
            <a href="/networks">Networks</a>
            &nbsp;|&nbsp;

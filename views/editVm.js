@@ -175,7 +175,7 @@ function attachmentRows(vm, controller) {
     .join('');
 }
 
-function controllerBlock(vm, controller, busOpts, formatOpts) {
+function controllerBlock(vm, controller, busOpts, formatOpts, attachIso = '') {
   const maxPort = Math.max(controller.portCount - 1, 0);
   return `
     <div class="card" style="margin:0.8rem 0;padding:1rem">
@@ -191,7 +191,7 @@ function controllerBlock(vm, controller, busOpts, formatOpts) {
         <thead><tr><th>Port</th><th>Device</th><th>Medium</th><th></th></tr></thead>
         <tbody>${attachmentRows(vm, controller)}</tbody>
       </table>
-      <details style="margin-top:0.5rem">
+      <details style="margin-top:0.5rem" ${attachIso ? 'open' : ''}>
         <summary class="muted" style="cursor:pointer">Attach a medium&hellip;</summary>
         <form method="POST" action="/vms/${encodeURIComponent(vm.uuid)}/storage/attach" style="margin-top:0.5rem">
           <input type="hidden" name="storagectl" value="${escapeHtml(controller.name)}">
@@ -204,11 +204,11 @@ function controllerBlock(vm, controller, busOpts, formatOpts) {
               <label>Type</label>
               <select name="type">
                 <option value="hdd">Hard disk</option>
-                <option value="dvddrive">Optical (DVD/ISO)</option>
+                <option value="dvddrive" ${attachIso ? 'selected' : ''}>Optical (DVD/ISO)</option>
                 <option value="fdd">Floppy</option>
               </select>
             </div>
-            <div class="field"><label>Image path</label><input type="text" name="medium" placeholder="/path/to/image.iso"></div>
+            <div class="field"><label>Image path</label><input type="text" name="medium" placeholder="/path/to/image.iso" value="${escapeHtml(attachIso)}"></div>
           </div>
           <button type="submit">Attach existing image</button>
         </form>
@@ -234,11 +234,11 @@ function controllerBlock(vm, controller, busOpts, formatOpts) {
 // immediate VBoxManage call with its own <form>, and a <form> can't nest
 // inside another <form> - a <fieldset> has no such restriction, so it still
 // sits in the same visual box as everything else.
-function storageSection(vm, storage, buses, formats, busPortRanges) {
+function storageSection(vm, storage, buses, formats, busPortRanges, attachIso = '') {
   const busOpts = buses.map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(STORAGE_BUS_LABELS[b] || b)}</option>`).join('');
   const formatOpts = formats.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
   const controllersHtml = storage.length
-    ? storage.map((c) => controllerBlock(vm, c, busOpts, formatOpts)).join('')
+    ? storage.map((c) => controllerBlock(vm, c, busOpts, formatOpts, attachIso)).join('')
     : '<p class="muted">No storage controllers yet.</p>';
   const firstBus = buses[0];
   const firstRange = (busPortRanges && busPortRanges[firstBus]) || { min: 1, max: 30 };
@@ -372,7 +372,7 @@ function sharedFoldersSection(vm, folders) {
 }
 
 // `vm` = full parsed settings (see server route). Fields default to '' if unknown.
-function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {} } = {}) {
+function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, attachIso = '' } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
 
@@ -570,7 +570,7 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
       ${sharedFoldersSection(vm, sharedFolders)}
 
       <div class="tab-panel" data-tab-panel="storage">
-        ${storageSection(vm, storage, storageBuses, diskFormats, busPortRanges)}
+        ${storageSection(vm, storage, storageBuses, diskFormats, busPortRanges, attachIso)}
       </div>
     </div>
 

@@ -41,6 +41,14 @@ systemctl status vboxdrv           # kernel module must be loaded
 lsmod | grep vbox
 ```
 
+### cloud-image-utils (for the Cloud-Init page)
+The Cloud-Init ISO builder shells out to `cloud-localds` to build NoCloud
+seed ISOs. Not required for the rest of the app.
+```bash
+sudo apt install cloud-image-utils
+cloud-localds --version
+```
+
 ### The VM-owning OS user
 VirtualBox VM configuration is **per-user**. All VMs on this host should be
 owned by one dedicated OS user (default assumed throughout this doc:
@@ -129,6 +137,8 @@ directly, etc.).
 | `TRUST_PROXY` | `true` | Whether to trust a reverse proxy's `X-Forwarded-For` for rate-limiting. Set to `false` if the app is ever reachable directly (no reverse proxy in front), otherwise a client can spoof its own rate-limit identity. |
 | `INSTANCE_NAME` | `""` | Shown in the page title, nav header, and login page instead of the plain app name - set this (e.g. to the hypervisor's hostname or role) if you run more than one instance against different VirtualBox hosts, so browser tabs/bookmarks stay distinguishable. |
 | `VBOXMANAGE_BIN` | `"VBoxManage"` | Path to the VBoxManage binary, if not on `PATH`. |
+| `CLOUD_LOCALDS_BIN` | `"cloud-localds"` | Path to the `cloud-localds` binary (from `cloud-image-utils`), if not on `PATH`. Used by the Cloud-Init ISO builder. |
+| `CLOUD_INIT_DIR` | `"data/cloud-init"` | Where generated cloud-init seed ISOs (for unattended VM installs) are written. Relative paths resolve against the repo root; use an absolute path to store them elsewhere (e.g. a larger disk). |
 
 The rest of `config/config.json` (session TTL, scrypt cost, rate limits,
 etc.) is exposed the same way - edit the field, restart the service.

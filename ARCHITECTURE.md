@@ -53,10 +53,14 @@ VM provisioning/cloning from templates, snapshots, resource reconfiguration.
 
 ```
 data/
-  config.json    # { "username": "...", "passwordHash": "...", "salt": "..." }
-  vms.json       # [ { "id": 1, "vboxUuid": "...", "displayName": "..." }, ... ]
-  audit.log      # JSONL, one line per action:
-                 # {"ts":"...","action":"start","vmId":1,"result":"ok"}
+  config.json               # { "username": "...", "passwordHash": "...", "salt": "..." }
+  vms.json                  # [ { "id": 1, "vboxUuid": "...", "displayName": "..." }, ... ]
+  audit.log                 # JSONL, one line per action:
+                             # {"ts":"...","action":"start","vmId":1,"result":"ok"}
+  cloud-init-templates.json # [ { "id", "name", "userData", "updatedAt" }, ... ] -
+                             # saved cloud-config templates, see lib/cloudinit.js
+  cloud-init/                # generated seed ISOs (unattended VM installs) -
+                              # location configurable via CLOUD_INIT_DIR in config.json
 ```
 
 Live VM state (running/stopped/etc.) is **never persisted** — always fetched
@@ -133,6 +137,17 @@ nodevboxadmin/
   - `readJson(path) -> Promise<object>`
   - `writeJson(path, data) -> Promise<void>` (queued per-file to serialize
     concurrent writes)
+- **`lib/cloudinit.js`** — NoCloud cloud-init seed ISO builder
+  - `listTemplates()` / `saveTemplate({id, name, userData})` (upsert) /
+    `deleteTemplate(id)` — saved cloud-config templates, via `lib/store.js`
+    against `data/cloud-init-templates.json`
+  - `buildIso({userData, hostname, isoName}) -> Promise<{ok, path, filename}>`
+    — substitutes `{{HOSTNAME}}` in `userData`, auto-generates `meta-data`
+    (fresh `instance-id` + `local-hostname`), shells out to `cloud-localds`
+    to pack both into `<CLOUD_INIT_DIR>/<isoName>.iso`
+  - `listIsos()` / `deleteIso(filename)` — plain filesystem listing/deletion
+    under `CLOUD_INIT_DIR` (not `VBoxManage list dvds` — a freshly-built ISO
+    isn't known to VirtualBox until attached to a VM at least once)
 - **`lib/audit.js`**
   - `logAction({action, vmId, result}) -> Promise<void>` (appends one JSON
     line to `data/audit.log`)
@@ -158,6 +173,11 @@ nodevboxadmin/
 | POST | `/vms` | yes | form: `vboxUuid`, `displayName` | 302 → `/vms` | Validates UUID format, (optionally) confirms it exists via `getVmInfo` before saving, appends to `vms.json`. |
 | POST | `/vms/:id/delete` | yes | — | 302 → `/vms` | Removes VM from registry only — **never** deletes the actual VM in VirtualBox. |
 | GET | `/public/app.js` | no | — | `application/javascript` | Static asset, served directly by `server.js` (no need for a static file library at this size). |
+| GET | `/cloud-init` | yes | — | HTML | Template editor, generated-ISO list, default template. |
+| POST | `/cloud-init/templates/save` | yes | form: `id?`, `name`, `userData` | 302 → `/cloud-init` (flash) | Upsert a saved template via `lib/cloudinit.js`. |
+| POST | `/cloud-init/templates/:id/delete` | yes | — | 302 → `/cloud-init` (flash) | |
+| POST | `/cloud-init/build` | yes | form: `outputName`, `userData` | 302 → `/cloud-init` (flash) | Builds `<CLOUD_INIT_DIR>/<outputName>.iso` via `cloud-localds`. Fails clearly (flash error) if that file already exists or `cloud-localds` isn't found. |
+| POST | `/cloud-init/isos/:filename/delete` | yes | — | 302 → `/cloud-init` (flash) | |
 
 Notes:
 - All mutating routes (`POST`) go through `requireAuth` and should validate

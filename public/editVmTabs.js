@@ -50,6 +50,13 @@
   } catch (e) {
     // Ignore; fall back to the first tab.
   }
+  // A URL hash (e.g. from the Cloud-Init page's "Mount to VM" link, which
+  // sends the admin here as #storage) wins over the remembered tab - it's a
+  // deliberate one-time navigation target, not a preference to override.
+  var hashTab = window.location.hash.slice(1);
+  if (hashTab && document.querySelector('[data-tab-panel="' + hashTab + '"]')) {
+    initial = hashTab;
+  }
   activate(initial);
 })();
 
