@@ -1,3 +1,6 @@
 # Runtime data - created at first run, never committed.
 data/*
 !data/.gitkeep
+
+# App settings - copy from config/config.json.example
+config/config.json

@@ -2,18 +2,31 @@
 'use strict';
 
 // One-off CLI to set (or reset) the single admin credential.
-// Run manually at deploy time:  node bin/setup-admin.js
+// Run manually at deploy time:  node config/password-reset.js
 //
 // Prompts for username + password on stdin (password not echoed) and writes
 // data/config.json with a fresh scrypt hash + salt. Never exposed over HTTP.
 //
 // Supports non-interactive use for automation:
-//   VBM_ADMIN_USER=admin VBM_ADMIN_PASS=secret node bin/setup-admin.js --non-interactive
+//   VBM_ADMIN_USER=admin VBM_ADMIN_PASS=secret node config/password-reset.js --non-interactive
 
 const readline = require('node:readline');
-const config = require('../lib/config');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const APP_CONFIG_FILE = path.join(__dirname, 'config.json');
+if (!fs.existsSync(APP_CONFIG_FILE)) {
+  console.error(`ERROR: ${APP_CONFIG_FILE} not found.`);
+  console.error('Copy config/config.json.example to config/config.json first.');
+  process.exit(1);
+}
+
 const auth = require('../lib/auth');
 const store = require('../lib/store');
+
+// Computed here rather than centralized, since it depends on where this
+// repo was cloned (no JSON equivalent of __dirname).
+const CONFIG_FILE = path.join(__dirname, '..', 'data', 'config.json');
 
 function ask(rl, question, { hidden = false } = {}) {
   return new Promise((resolve) => {
@@ -47,7 +60,7 @@ function ask(rl, question, { hidden = false } = {}) {
 }
 
 function printHelp() {
-  console.log(`Usage: node bin/setup-admin.js [options]
+  console.log(`Usage: node config/password-reset.js [options]
 
 Sets (or resets) the single admin login for nodevboxadmin.
 
@@ -60,8 +73,8 @@ Options:
 With no options, prompts interactively for username + password.
 
 Examples:
-  node bin/setup-admin.js
-  VBM_ADMIN_USER=admin VBM_ADMIN_PASS=secretpw node bin/setup-admin.js --non-interactive`);
+  node config/password-reset.js
+  VBM_ADMIN_USER=admin VBM_ADMIN_PASS=secretpw node config/password-reset.js --non-interactive`);
 }
 
 async function main() {
@@ -107,12 +120,12 @@ async function main() {
   }
 
   // Merge onto the existing file rather than overwriting it outright - it
-  // may already hold an instanceName set via bin/set-instance-name.js, which
-  // a password reset shouldn't wipe out.
-  const existing = await store.readJson(config.CONFIG_FILE, {});
+  // may hold other fields (e.g. a hand-edited instanceName) that a password
+  // reset shouldn't wipe out.
+  const existing = await store.readJson(CONFIG_FILE, {});
   const cred = { ...existing, ...auth.buildCredential(username, password) };
-  await store.writeJson(config.CONFIG_FILE, cred);
-  console.log(`\nAdmin credential written to ${config.CONFIG_FILE}`);
+  await store.writeJson(CONFIG_FILE, cred);
+  console.log(`\nAdmin credential written to ${CONFIG_FILE}`);
   console.log(`Username: ${username}`);
 }
 

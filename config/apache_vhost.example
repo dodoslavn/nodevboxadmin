@@ -1,0 +1,37 @@
+# Example Apache reverse-proxy vhost for nodevboxadmin.
+#
+# This is an EXAMPLE, not consumed by any script - copy it, edit the
+# ServerName and cert paths, and enable it yourself:
+#
+#   sudo cp config/apache_vhost.example /etc/apache2/sites-available/nodevboxadmin.conf
+#   sudoedit /etc/apache2/sites-available/nodevboxadmin.conf   # set ServerName, cert paths
+#   sudo a2enmod proxy proxy_http ssl headers
+#   sudo a2ensite nodevboxadmin
+#   sudo apache2ctl configtest && sudo systemctl reload apache2
+#
+# Assumes the app is listening on 127.0.0.1:3000 (config/config.json default -
+# update the port below if you changed it there) and that TRUST_PROXY is left
+# at its default (true) in config/config.json, so the app trusts the
+# X-Forwarded-For hop this vhost adds.
+
+<VirtualHost *:80>
+    ServerName nodevboxadmin.example.internal
+    Redirect permanent / https://nodevboxadmin.example.internal/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName nodevboxadmin.example.internal
+
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/nodevboxadmin.crt
+    SSLCertificateKeyFile /etc/ssl/private/nodevboxadmin.key
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+
+    RequestHeader set X-Forwarded-Proto "https"
+
+    ErrorLog ${APACHE_LOG_DIR}/nodevboxadmin-error.log
+    CustomLog ${APACHE_LOG_DIR}/nodevboxadmin-access.log combined
+</VirtualHost>

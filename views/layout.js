@@ -1,6 +1,6 @@
 'use strict';
 
-const config = require('../lib/config');
+const config = require('../config/config.json');
 
 // Shared HTML shell + minimal CSS. Plain template literals, no engine.
 // All dynamic values passed in here must already be escaped by the caller
@@ -12,9 +12,9 @@ const config = require('../lib/config');
 const PRODUCT_NAME = 'NodeVboxAdmin';
 
 // PRODUCT_NAME, plus config.INSTANCE_NAME appended if set (see
-// lib/config.js) - so multiple instances against different VirtualBox hosts
-// stay distinguishable in browser tabs/bookmarks, without losing which tool
-// it actually is.
+// config/config.json) - so multiple instances against different VirtualBox
+// hosts stay distinguishable in browser tabs/bookmarks, without losing which
+// tool it actually is.
 const BRAND_NAME = config.INSTANCE_NAME ? `${PRODUCT_NAME} — ${config.INSTANCE_NAME}` : PRODUCT_NAME;
 const REPO_URL = 'https://github.com/dodoslavn/nodevboxadmin';
 

@@ -1,0 +1,17 @@
+{
+  "HOST": "127.0.0.1",
+  "PORT": 3000,
+  "INSTANCE_NAME": "",
+  "SESSION_COOKIE_NAME": "vbm_session",
+  "SESSION_TTL_MS": 43200000,
+  "VBOXMANAGE_BIN": "VBoxManage",
+  "VBOXMANAGE_TIMEOUT_MS": 15000,
+  "SCREENSHOT_TIMEOUT_MS": 20000,
+  "VBOXNETADPCTL_BIN": "/usr/lib/virtualbox/VBoxNetAdpCtl",
+  "SCRYPT_PARAMS": { "N": 16384, "r": 8, "p": 1 },
+  "SCRYPT_KEYLEN": 64,
+  "LOGIN_RATE": { "windowMs": 900000, "max": 10 },
+  "ACTION_RATE": { "windowMs": 60000, "max": 30 },
+  "SCREENSHOT_RATE": { "windowMs": 60000, "max": 60 },
+  "TRUST_PROXY": true
+}

@@ -2,7 +2,8 @@
 
 Operational runbook for deploying the nodevboxadmin web app on Debian stable.
 The app is a dependency-free Node.js service that manages VirtualBox VMs by
-shelling out to `VBoxManage`, fronted by Apache for TLS.
+shelling out to `VBoxManage`. It runs in place from wherever you cloned it —
+there's no copy-to-`/opt` step.
 
 See `ARCHITECTURE.md` for the design rationale.
 
@@ -41,76 +42,59 @@ lsmod | grep vbox
 ```
 
 ### The VM-owning OS user
-VirtualBox VM configuration is **per-user**. All VMs on this host are owned by
-the `virtualbox` user (see `../docs/manual.md`). The web app runs as this same
-user so it sees the right VBox config.
+VirtualBox VM configuration is **per-user**. All VMs on this host should be
+owned by one dedicated OS user (default assumed throughout this doc:
+`virtualbox`). The web app runs as this same user so it sees the right VBox
+config.
 
 ```bash
 id virtualbox                       # confirm the user exists
 sudo usermod -aG vboxusers virtualbox
 ```
 
-> If you use a different owner, set `APP_USER=<user>` when running the
-> installer and update the systemd unit's `User=`/`Group=`.
-
-### Apache
-```bash
-sudo apt install apache2
-sudo a2enmod proxy proxy_http ssl headers
-sudo systemctl restart apache2
-```
+### Reverse proxy (optional but recommended)
+The app binds to `127.0.0.1` only by default and has no TLS of its own. If
+you need HTTPS or access from outside the host, put a reverse proxy
+(Apache, nginx, Caddy — whatever you already run) in front of it, pointed at
+`127.0.0.1:<PORT>`. An example Apache vhost is at
+`config/apache_vhost.example` (copy + edit, not consumed by any script - see
+the instructions at the top of that file). See `TRUST_PROXY` in section 5 if
+you do this.
 
 ---
 
 ## 2. Install the app
 
 ```bash
-cd /path/to/repo/webapp
-sudo ./deploy/install-webapp.sh
+cd /path/to/where/you/cloned/nodevboxadmin
+sudo ./config/systemd_install.sh              # runs as user "virtualbox" by default
+# or: sudo ./config/systemd_install.sh someuser
 ```
 
-This copies the app to `/opt/nodevboxadmin`, creates `data/` (0700, owned by the
-app user), installs+enables the systemd unit, and starts the service.
+No config file needed. It installs and starts a `nodevboxadmin.service`
+systemd unit that runs `node server.js` directly from this checkout
+(`WorkingDirectory` = the clone path), as the given OS user (its primary
+group is used as the unit's `Group=`). Creates `data/` (0700, owned by
+that user) if it doesn't already exist.
 
 ### Set the admin password (first run)
 ```bash
-sudo -u virtualbox node /opt/nodevboxadmin/bin/setup-admin.js
+sudo -u virtualbox node config/password-reset.js
 ```
-Interactive; prompts for username + password (min 8 chars). Writes
-`data/config.json` (0600, scrypt hash). Re-run any time to reset.
+Run from the repo directory. Interactive; prompts for username + password
+(min 8 chars). Writes `data/config.json` (0600, scrypt hash). Re-run any
+time to reset.
 
 ---
 
-## 3. Configure Apache (TLS + proxy)
-
-1. Put a TLS cert/key at the paths in `deploy/apache-vhost.conf`
-   (`/etc/ssl/certs/nodevboxadmin.crt`, `/etc/ssl/private/nodevboxadmin.key`).
-   Use your internal CA or Let's Encrypt.
-2. Copy and edit the vhost:
-   ```bash
-   sudo cp /opt/nodevboxadmin/deploy/apache-vhost.conf \
-     /etc/apache2/sites-available/nodevboxadmin.conf
-   sudoedit /etc/apache2/sites-available/nodevboxadmin.conf   # set ServerName
-   sudo a2ensite nodevboxadmin
-   sudo apache2ctl configtest && sudo systemctl reload apache2
-   ```
-
-The app trusts `X-Forwarded-For` (set automatically by `mod_proxy_http`) for
-per-client rate limiting. Node listens on `127.0.0.1:3000` only — never expose
-it directly.
-
----
-
-## 4. Verify
+## 3. Verify
 
 ```bash
 systemctl status nodevboxadmin.service
 curl -s http://127.0.0.1:3000/healthz              # {"ok":true,...}
-curl -skI https://nodevboxadmin.example.internal/   # 200/302 via Apache
 ```
 
-- Log in through the browser (HTTPS — the session cookie is `Secure`, so it
-  will NOT work over plain HTTP).
+- Log in through the browser.
 - Register a VM: get its UUID with `sudo -u virtualbox VBoxManage list vms`,
   paste into the VMs page.
 - Confirm start/stop works and appears in the VM's activity log.
@@ -127,40 +111,45 @@ sudo reboot     # then re-check status + healthz
 
 ---
 
-## 5. Configuration (environment variables)
+## 4. Configuration (config/config.json)
 
-Set these in the systemd unit's `Environment=` lines (see
-`deploy/nodevboxadmin.service`) or export them before running `node
-server.js` directly.
+App settings are a static JSON file, not environment variables - edit
+`config/config.json` directly and restart the service (`sudo systemctl
+restart nodevboxadmin`) to pick up a change. This is the single source of
+truth regardless of how the app is started (systemd, `node server.js`
+directly, etc.).
 
-| Variable | Default | Notes |
+(Who the systemd service runs as is set via a command-line argument to
+`systemd_install.sh`, not a config file - see section 2.)
+
+| Key | Default | Notes |
 |---|---|---|
-| `PORT` | `3000` | Must be 1-65535. |
-| `HOST` | `127.0.0.1` | Listen address. Only bind to something other than a loopback address if you know what's fronting it - see `TRUST_PROXY` below. |
-| `TRUST_PROXY` | `true` | Whether to trust the reverse proxy's `X-Forwarded-For` for rate-limiting. Set to `false` if the app is ever reachable directly (no Apache in front), otherwise a client can spoof its own rate-limit identity. |
-| `INSTANCE_NAME` | *(unset)* | Shown in the page title, nav header, and login page instead of the plain app name - set this (e.g. to the hypervisor's hostname or role) if you run more than one instance against different VirtualBox hosts, so browser tabs/bookmarks stay distinguishable. Usually easier to set persistently instead: `node bin/set-instance-name.js "prod-hv1"` (writes to `data/config.json`, survives without touching env vars) - this env var, if set, always wins over that. |
-| `VBOXMANAGE_BIN` | `VBoxManage` | Path to the VBoxManage binary, if not on `PATH`. |
+| `PORT` | `3000` | |
+| `HOST` | `"127.0.0.1"` | Listen address. Only bind to something other than a loopback address if you know what's fronting it - see `TRUST_PROXY` below. |
+| `TRUST_PROXY` | `true` | Whether to trust a reverse proxy's `X-Forwarded-For` for rate-limiting. Set to `false` if the app is ever reachable directly (no reverse proxy in front), otherwise a client can spoof its own rate-limit identity. |
+| `INSTANCE_NAME` | `""` | Shown in the page title, nav header, and login page instead of the plain app name - set this (e.g. to the hypervisor's hostname or role) if you run more than one instance against different VirtualBox hosts, so browser tabs/bookmarks stay distinguishable. |
+| `VBOXMANAGE_BIN` | `"VBoxManage"` | Path to the VBoxManage binary, if not on `PATH`. |
 
-After changing `HOST`/`PORT`, restart the service (or the process) for it to
-take effect - the app reads them once at startup.
+The rest of `config/config.json` (session TTL, scrypt cost, rate limits,
+etc.) is exposed the same way - edit the field, restart the service.
 
-## 6. Operations
+## 5. Operations
 
 | Task | Command |
 |---|---|
 | Status | `systemctl status nodevboxadmin` |
 | Logs | `journalctl -u nodevboxadmin -f` |
 | Restart | `sudo systemctl restart nodevboxadmin` |
-| Update code | re-run `sudo ./deploy/install-webapp.sh` |
-| Reset admin password | `sudo -u virtualbox node /opt/nodevboxadmin/bin/setup-admin.js` |
-| Set instance name | `sudo -u virtualbox node /opt/nodevboxadmin/bin/set-instance-name.js "prod-hv1"` (then restart) |
-| Audit log | `sudo cat /opt/nodevboxadmin/data/audit.log` (JSONL) |
+| Update code | `git pull` in the repo, then `sudo systemctl restart nodevboxadmin` |
+| Reset admin password | `sudo -u virtualbox node config/password-reset.js` (from repo dir) |
+| Audit log | `sudo cat data/audit.log` (JSONL, from repo dir) |
+| Uninstall service | `sudo ./config/systemd_uninstall.sh` (leaves code + data/ untouched) |
 
-Backup: copy `/opt/nodevboxadmin/data/` (holds credential, registry, audit log).
+Backup: copy the repo's `data/` directory (holds credential, registry, audit log).
 
 ---
 
-## 7. Caveats & troubleshooting
+## 6. Caveats & troubleshooting
 
 ### DKMS / kernel updates (IMPORTANT)
 VirtualBox's `vboxdrv` kernel module is built via DKMS. A Debian kernel update
@@ -180,11 +169,13 @@ per-user; the service **must** run as the user that owns the VMs (`virtualbox`
 by default). Check `User=` in the unit and `sudo -u virtualbox VBoxManage list vms`.
 
 ### VMs won't start after enabling systemd sandboxing
-The unit sets `ProtectSystem=strict`, `NoNewPrivileges`, `PrivateTmp`, etc.
-VirtualBox can be sensitive to these. If VMs fail to start or VBoxManage errors
-only under systemd (but work when run manually), relax the offending directive
-(commonly `ProtectSystem` or add `ReadWritePaths` for your VM storage location)
-and re-test. VM storage defaults to `~virtualbox/VirtualBox VMs`.
+The generated unit sets `ProtectSystem=strict`, `NoNewPrivileges`, `PrivateTmp`,
+etc. VirtualBox can be sensitive to these. If VMs fail to start or VBoxManage
+errors only under systemd (but work when run manually), edit
+`/etc/systemd/system/nodevboxadmin.service` directly and relax the offending
+directive (commonly `ProtectSystem` or add `ReadWritePaths` for your VM
+storage location), then `sudo systemctl daemon-reload && sudo systemctl
+restart nodevboxadmin`. VM storage defaults to `~virtualbox/VirtualBox VMs`.
 
 ### Screenshot returns 409/503
 409 = VM not running (expected). 503 = VBoxManage not found on the service's

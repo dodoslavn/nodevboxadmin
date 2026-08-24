@@ -4,7 +4,20 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const config = require('./lib/config');
+const APP_CONFIG_FILE = path.join(__dirname, 'config', 'config.json');
+if (!fs.existsSync(APP_CONFIG_FILE)) {
+  console.error(`ERROR: ${APP_CONFIG_FILE} not found.`);
+  console.error('Copy config/config.json.example to config/config.json first.');
+  process.exit(1);
+}
+const config = require('./config/config.json');
+
+// Computed here rather than centralized, since these depend on where this
+// repo was cloned (no JSON equivalent of __dirname).
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+const AUDIT_LOG_FILE = path.join(DATA_DIR, 'audit.log');
 const { Router } = require('./lib/router');
 const auth = require('./lib/auth');
 const vmstatus = require('./lib/vmstatus');
@@ -64,11 +77,12 @@ const loginLimiter = createLimiter(config.LOGIN_RATE);
 const actionLimiter = createLimiter(config.ACTION_RATE);
 const screenshotLimiter = createLimiter(config.SCREENSHOT_RATE);
 
-// Derive a client key for rate limiting. Behind Apache we trust the LAST
-// X-Forwarded-For hop: mod_proxy_http appends the real client address to any
-// existing header rather than replacing it, so a client can prepend arbitrary
-// values of its own - only the last entry is the one Apache itself added and
-// can't be spoofed. Otherwise fall back to the socket address. If neither is
+// Derive a client key for rate limiting. Behind a reverse proxy we trust the
+// LAST X-Forwarded-For hop: well-behaved proxies (Apache mod_proxy_http,
+// nginx, Caddy, ...) append the real client address to any existing header
+// rather than replacing it, so a client can prepend arbitrary values of its
+// own - only the last entry is the one the proxy itself added and can't be
+// spoofed. Otherwise fall back to the socket address. If neither is
 // available, all clients share one bucket (fail closed / conservative).
 function clientKey(req) {
   if (config.TRUST_PROXY) {
@@ -1117,10 +1131,10 @@ function tryServeStatic(pathname, res) {
   if (!pathname.startsWith('/public/')) return false;
 
   const relative = pathname.slice('/public/'.length);
-  const resolved = path.resolve(config.PUBLIC_DIR, relative);
+  const resolved = path.resolve(PUBLIC_DIR, relative);
 
   // Guard against path traversal (e.g. /public/../../etc/passwd).
-  if (!resolved.startsWith(config.PUBLIC_DIR + path.sep) && resolved !== config.PUBLIC_DIR) {
+  if (!resolved.startsWith(PUBLIC_DIR + path.sep) && resolved !== PUBLIC_DIR) {
     res.writeHead(403);
     res.end('Forbidden');
     return true;
@@ -1197,9 +1211,9 @@ const server = http.createServer(handleRequest);
 // fails (e.g. unusual ownership).
 function ensureDataDirPerms() {
   try {
-    fs.mkdirSync(config.DATA_DIR, { recursive: true, mode: 0o700 });
-    fs.chmodSync(config.DATA_DIR, 0o700);
-    for (const f of [config.CONFIG_FILE, config.AUDIT_LOG_FILE]) {
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
+    for (const f of [CONFIG_FILE, AUDIT_LOG_FILE]) {
       if (fs.existsSync(f)) fs.chmodSync(f, 0o600);
     }
   } catch (err) {

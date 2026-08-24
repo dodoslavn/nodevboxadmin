@@ -22,7 +22,7 @@ VM provisioning/cloning from templates, snapshots, resource reconfiguration.
 | Auth | Single admin account, session-based login | `node:crypto` `scrypt` for password hashing, in-memory session store |
 | VM control | `VBoxManage` via `child_process.execFile` | Argument arrays only, never shell string interpolation |
 | VirtualBox source | **Oracle's official VirtualBox APT repo** | Debian stable does not reliably ship VirtualBox in its own repos (contrib-only, frequently missing/blocked from migrating to stable) |
-| Reverse proxy | **Apache** (`mod_proxy`, `mod_proxy_http`, `mod_ssl`) | TLS termination + proxy to Node on `127.0.0.1`; Node never exposed directly |
+| Reverse proxy | Bring-your-own (Apache/nginx/Caddy/etc.), optional | Only needed for TLS/off-host access - Node listens on `127.0.0.1` by default either way. An example Apache vhost is provided (`config/apache_vhost.example`) but not required |
 | Process supervision | systemd | `Restart=on-failure`, runs as dedicated OS user |
 | Templating | Plain JS template literals | No template engine dependency |
 
@@ -45,9 +45,9 @@ VM provisioning/cloning from templates, snapshots, resource reconfiguration.
     Pin to a specific VirtualBox major version rather than tracking latest
     blindly.
 - **Dedicated OS user**: must be a member of the `vboxusers` group and own/
-  have access to the VM files. Apache's proxy target (the Node process) runs
-  as this dedicated user via systemd, not as Apache's own user — Apache only
-  proxies HTTP(S), it does not need VirtualBox permissions itself.
+  have access to the VM files. The Node process runs as this dedicated user
+  via systemd. If a reverse proxy is added in front, it only needs to proxy
+  HTTP(S) — it does not need VirtualBox permissions itself.
 
 ## 4. Data Model (JSON files)
 
@@ -73,8 +73,15 @@ from the same browser session.
 
 ```
 nodevboxadmin/
-├── bin/
-│   └── setup-admin.js       # one-off CLI: sets/resets admin username+password
+├── config/
+│   ├── config.json              # app settings (PORT, HOST, TRUST_PROXY, ...) - static, edit directly, no env vars
+│   │                             # required directly (require('../config/config.json')) by whichever files need it;
+│   │                             # paths like data/config.json are computed locally at each call site instead of
+│   │                             # centralized, since they depend on where this repo was cloned
+│   ├── apache_vhost.example      # example reverse-proxy vhost (copy + edit, not consumed by any script)
+│   ├── password-reset.js        # one-off CLI: sets/resets admin username+password
+│   ├── systemd_install.sh       # install the systemd service in-place (unit content inlined, no config file needed)
+│   └── systemd_uninstall.sh     # uninstall it
 ├── data/                    # gitignored; created at first run if missing
 │   ├── config.json
 │   ├── vms.json
@@ -84,8 +91,7 @@ nodevboxadmin/
 │   ├── vbox.js               # VBoxManage wrapper (execFile-based)
 │   ├── store.js               # JSON file read/write helper + write queue
 │   ├── audit.js                # JSONL append-only logger
-│   ├── router.js                # tiny manual method+path router
-│   └── config.js                 # app-wide constants (paths, ports, timeouts)
+│   └── router.js                # tiny manual method+path router
 ├── views/
 │   ├── layout.js             # shared HTML shell + CSS block
 │   ├── login.js              # login page markup
@@ -95,9 +101,6 @@ nodevboxadmin/
 │   └── app.js                # small vanilla JS: polling, button handlers
 ├── server.js                 # entry point: http.createServer + route wiring
 ├── package.json               # name/version/start script only, no deps
-├── deploy/
-│   ├── nodevboxadmin.service   # systemd unit
-│   └── apache-vhost.conf       # Apache reverse proxy vhost
 └── ARCHITECTURE.md
 ```
 
@@ -134,8 +137,8 @@ nodevboxadmin/
   - `logAction({action, vmId, result}) -> Promise<void>` (appends one JSON
     line to `data/audit.log`)
   - `readRecent(vmId, limit) -> Promise<Array>` (tails the log file, filtered)
-- **`bin/setup-admin.js`** — run manually once at deploy time (`node
-  bin/setup-admin.js`), prompts for username/password on stdin, writes
+- **`config/password-reset.js`** — run manually once at deploy time (`node
+  config/password-reset.js`), prompts for username/password on stdin, writes
   `data/config.json` with a fresh scrypt hash + salt. Not exposed over HTTP.
 
 ## 6. Routes
@@ -143,7 +146,7 @@ nodevboxadmin/
 | Method | Path | Auth | Request | Response | Behavior |
 |---|---|---|---|---|---|
 | GET | `/login` | no | — | HTML | Render login form. If already authenticated, redirect to `/dashboard`. |
-| POST | `/login` | no | form: `username`, `password` | 302 → `/dashboard` or re-render form with error | Verify against `config.json`; on success, issue session cookie. |
+| POST | `/login` | no | form: `username`, `password` | 302 → `/dashboard` or re-render form with error | Verify against `data/config.json`; on success, issue session cookie. |
 | POST | `/logout` | yes | — | 302 → `/login` | Destroy session, clear cookie. |
 | GET | `/dashboard` | yes | — | HTML | List all registered VMs; initial render includes current status fetched synchronously; page also starts client-side polling. |
 | GET | `/api/vms/status` | yes | — | JSON: `[{id, uuid, name, state}]` | Called every ~5s by dashboard JS. Runs `listVms()`/`getVmInfo` live, no cache. |
@@ -183,16 +186,16 @@ Notes:
   params are resolved to a registered UUID before touching VBoxManage.
 - `stop` mode is mapped through a fixed whitelist (`acpi` → `acpipowerbutton`,
   `hard` → `poweroff`), never passed through raw.
-- Session cookie: `httpOnly`, `sameSite=strict`, `secure` (site is behind TLS
-  via Apache).
-- Passwords: `scrypt` hash + random salt in `config.json`, never plaintext.
-  Set via `bin/setup-admin.js`, never over HTTP.
+- Session cookie: `httpOnly`, `sameSite=strict`, `secure` (requires TLS - see
+  the reverse proxy note above if the cookie needs to actually work).
+- Passwords: `scrypt` hash + random salt in `data/config.json`, never
+  plaintext. Set via `config/password-reset.js`, never over HTTP.
 - Basic in-memory rate limiting on action endpoints (simple counter per
   session, no dep).
-- Apache handles TLS; Node listens on `127.0.0.1` only, never exposed
-  directly to the network.
-- `data/` directory must not be web-readable (outside Apache's served
-  document root, or explicitly denied via vhost config).
+- Node listens on `127.0.0.1` only by default, never exposed directly to the
+  network unless `HOST` is explicitly overridden.
+- `data/` directory is outside `public/` (the only directory ever served as
+  static files), so it's never web-reachable regardless of proxy config.
 
 ## 9. Milestones & Steps
 
@@ -208,14 +211,13 @@ Notes:
 ### M1 — Project Skeleton
 - [ ] Init project structure (`server.js`, `lib/`, `views/`, `public/`, `data/`)
 - [ ] `lib/router.js` minimal router, one test route ("hello world")
-- [ ] Draft systemd unit file (`deploy/nodevboxadmin.service`)
-- [ ] Draft Apache vhost config (`deploy/apache-vhost.conf`, `mod_proxy` to
-      `127.0.0.1:PORT`)
-- [ ] Deploy this skeleton end-to-end first (systemd + Apache + TLS working)
-      before writing any real app logic
+- [ ] Draft systemd unit (`config/systemd_install.sh`, in-place - no reverse
+      proxy bundled, bring your own if exposing beyond localhost)
+- [ ] Deploy this skeleton end-to-end first (systemd service running) before
+      writing any real app logic
 
 ### M2 — Auth
-- [ ] `bin/setup-admin.js` bootstrap script (set initial admin username/password)
+- [ ] `config/password-reset.js` bootstrap script (set initial admin username/password)
 - [ ] `lib/auth.js`: `verifyLogin`, session issue/verify, `scrypt` hashing
 - [ ] `GET/POST /login`, `POST /logout`
 - [ ] `requireAuth` middleware applied to all protected routes
@@ -252,7 +254,6 @@ Notes:
 
 ### M9 — Deployment
 - [ ] Finalize systemd unit (`Restart=on-failure`, correct `User=`)
-- [ ] Finalize Apache vhost (TLS cert, `mod_proxy` config)
 - [ ] Verify restart-on-crash and restart-on-reboot behavior
 - [ ] Document the Oracle VirtualBox repo pin + DKMS-after-kernel-update
       check as an operational runbook item
@@ -264,5 +265,5 @@ None outstanding — all major decisions resolved:
 - Storage: JSON files
 - Auth: single admin, session-based
 - VirtualBox source: Oracle's official APT repo
-- Reverse proxy: Apache
+- Reverse proxy: bring-your-own if needed; example Apache vhost provided
 - Process supervision: systemd
