@@ -1,11 +1,14 @@
 # Node Vbox Admin
 
-Web UI tool to manage VirtualBox VMs on the system. All it does is run "vboxmanage" executable on the background
+Web UI tool to manage VirtualBox VMs on the system. All it does is run "vboxmanage" executable on the background.  
 Runs on NodeJS, with minimum dependencies.  
 
 > **This project is completely vibe-coded** — written by an AI coding agent
 > from natural-language instructions, with human review and testing but no
 > hand-written code. Read it before you trust it with a production host.
+
+## Limitation
+This tool will only see VMs which are configured in the same OS user.
 
 ## Features
 
@@ -36,50 +39,25 @@ Runs on NodeJS, with minimum dependencies.
 
 ## Installation
 Move to some folder where you will keep the application permanently a.g.:  
-> cd /opt/git/  
+> cd /opt/git/
+
 Clone the Git repo:  
 > git clone https://github.com/dodoslavn/nodevboxadmin  
 > cd nodevboxadmin
+
 Copy and edit configuration file:  
 > cp config/config.json.example config/config.json
-> editor config/config.json
+> editor config/config.json  
+
 Set new username and password:  
 > node config/password-reset.js
+
 Test the application if it works:  
 > node server.js
+
 Install the application as a SystemD service:
 > config/systemd_install.sh
-```
 
-Then open `http://127.0.0.1:3000` and log in.
-
-Override the listen address/port (or anything else) by editing
-`config/config.json` and restarting. See
-[DEPLOY.md](DEPLOY.md#4-configuration-configconfigjson) for the full list of
-settings and the security note on `TRUST_PROXY` if you bind to anything
-other than a loopback address.
-
-For a real deployment (installed as a systemd service via
-`config/systemd_install.sh`, running in place from the clone), see
-[DEPLOY.md](DEPLOY.md). For the design rationale and internal architecture,
-see [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## Why no dependencies?
-
-Fewer moving parts, less version-compat risk, no supply-chain surface to
-worry about for a small single-admin tool that only needs to render HTML
-forms and shell out to `VBoxManage`. See `ARCHITECTURE.md` for the full
-reasoning.
-
-## Security notes
-
-- Single admin user, no roles/accounts system — this is a personal/small-team
-  admin tool, not multi-tenant
-- Meant to run behind a reverse proxy that terminates TLS if exposed beyond
-  the host; the app binds to `127.0.0.1` only by default (configurable, see
-  above)
-- All `VBoxManage` calls use `execFile` with argument arrays — never a shell
-  — so user input can't inject shell commands
 
 ## License
 
