@@ -41,7 +41,7 @@ This tool will only see VMs which are configured in the same OS user.
 Switch to OS user which have the VMs you want to manage, e.g.:
 > su - virtualbox
 
-Move to some folder where you will keep the application permanently a.g.:  
+Move to some folder where you will keep the application permanently e.g.:  
 > cd /opt/git/
 
 Clone the Git repo:  
