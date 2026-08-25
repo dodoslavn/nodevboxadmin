@@ -49,7 +49,7 @@ Clone the Git repo:
 > cd nodevboxadmin
 
 Copy and edit configuration file:  
-> cp config/config.json.example config/config.json
+> cp config/config.json.example config/config.json  
 > editor config/config.json  
 
 Set new username and password:  
