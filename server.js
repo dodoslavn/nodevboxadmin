@@ -122,6 +122,13 @@ router.get('/healthz', (req, res) => {
   json(res, { ok: true, uptimeSeconds: Math.round(process.uptime()) });
 });
 
+// Browsers probe this path automatically regardless of the <link rel="icon">
+// in layout.js - serve the same icon here so that doesn't 404.
+router.get('/favicon.ico', (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+  fs.createReadStream(path.join(PUBLIC_DIR, 'favicon.svg')).pipe(res);
+});
+
 // Root redirects to dashboard (or login, via the auth guard downstream).
 router.get('/', (req, res) => {
   redirect(res, auth.sessionForRequest(req) ? '/dashboard' : '/login');
