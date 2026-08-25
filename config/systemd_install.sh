@@ -37,45 +37,23 @@ if [[ -z "$NODE_BIN" ]]; then
 fi
 
 # The unit file content, kept inline here (rather than a separate template
-# file) so this script is self-contained.
+# file) so this script is self-contained. Deliberately minimal - no
+# sandboxing directives, no WorkingDirectory (ExecStart already uses an
+# absolute path, and the app resolves its own paths via __dirname, not cwd),
+# no Environment= (app settings come from config/config.json, not env vars).
+# Matches the plain, known-working unit shape already run in production.
 UNIT_CONTENT="[Unit]
 Description=nodevboxadmin - VirtualBox web management app
-Documentation=file:$REPO_DIR/DEPLOY.md
 After=network.target vboxdrv.service
 Wants=vboxdrv.service
 
 [Service]
 Type=simple
-
-# IMPORTANT: VirtualBox VM config is per-OS-user. The webapp shells out to
-# VBoxManage AS ITS OWN USER, so it must run as the user that owns the VMs.
-# Running as any other user would see an empty, unrelated VBox config.
 User=$APP_USER
 Group=$APP_GROUP
-
-WorkingDirectory=$REPO_DIR
 ExecStart=$NODE_BIN $REPO_DIR/server.js
-Environment=NODE_ENV=production
-# PORT, HOST, TRUST_PROXY, and everything else app-level are NOT set here -
-# the app reads them from config/config.json directly, regardless of how
-# it's started. Edit that file and restart the service to change them.
-
 Restart=on-failure
 RestartSec=5
-
-# --- Sandboxing ---
-# These restrict the service. VirtualBox/VBoxManage can be sensitive to
-# sandboxing; if VMs fail to start or VBoxManage errors after enabling these,
-# relax the offending directive and re-test (see DEPLOY.md troubleshooting).
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=false
-# data/ is the only path the app writes to. VirtualBox also needs to write to
-# the VM owner's home (~/.config/VirtualBox, ~/VirtualBox VMs) and /tmp; those
-# are covered by ProtectHome=false + PrivateTmp. Add more ReadWritePaths if
-# your VM storage lives elsewhere.
-ReadWritePaths=$REPO_DIR/data
 
 [Install]
 WantedBy=multi-user.target

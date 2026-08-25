@@ -181,14 +181,15 @@ Almost always the service is running as the wrong user. VBox config is
 per-user; the service **must** run as the user that owns the VMs (`virtualbox`
 by default). Check `User=` in the unit and `sudo -u virtualbox VBoxManage list vms`.
 
-### VMs won't start after enabling systemd sandboxing
-The generated unit sets `ProtectSystem=strict`, `NoNewPrivileges`, `PrivateTmp`,
-etc. VirtualBox can be sensitive to these. If VMs fail to start or VBoxManage
-errors only under systemd (but work when run manually), edit
-`/etc/systemd/system/nodevboxadmin.service` directly and relax the offending
-directive (commonly `ProtectSystem` or add `ReadWritePaths` for your VM
-storage location), then `sudo systemctl daemon-reload && sudo systemctl
-restart nodevboxadmin`. VM storage defaults to `~virtualbox/VirtualBox VMs`.
+### VMs work fine manually but not under systemd
+The generated unit is deliberately minimal - no `ProtectSystem`,
+`NoNewPrivileges`, `PrivateTmp`, or other sandboxing directives, since
+VirtualBox can be sensitive to them (this was a real cause of confusing,
+hard-to-reproduce failures - VBoxManage calls that ran fine manually but
+hung or errored only when launched via the sandboxed unit). If you add any
+of these yourself and VMs stop working or VBoxManage errors only under
+systemd (but work when run manually), that's almost certainly why - remove
+or relax the directive and re-test.
 
 ### Screenshot returns 409/503
 409 = VM not running (expected). 503 = VBoxManage not found on the service's
