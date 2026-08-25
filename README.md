@@ -1,8 +1,7 @@
-# nodevboxadmin
+# Node Vbox Admin
 
-A small, dependency-free Node.js web admin panel for managing VirtualBox on
-a single Linux host. Runs as a plain `http` server (no Express, no npm
-dependencies at all) and drives everything through `VBoxManage`.
+Web UI tool to manage VirtualBox VMs on the system. All it does is run "vboxmanage" executable on the background
+Runs on NodeJS, with minimum dependencies.  
 
 > **This project is completely vibe-coded** — written by an AI coding agent
 > from natural-language instructions, with human review and testing but no
@@ -31,17 +30,25 @@ dependencies at all) and drives everything through `VBoxManage`.
 ## Requirements
 
 - Node.js >= 20
-- VirtualBox installed and `VBoxManage` on `PATH`
+- VirtualBox (obviously)
+- HTTP Reverse Proxy (recommended)
 - Linux (developed against VirtualBox 7.2.x on Ubuntu/Debian)
 
-## Quick start
-
-```bash
-git clone https://github.com/dodoslavn/nodevboxadmin
-cd nodevboxadmin
-cp config/config.json.example config/config.json   # required - app settings live here
-node config/password-reset.js   # sets the admin username/password
-node server.js            # listens on 127.0.0.1:3000 by default
+## Installation
+Move to some folder where you will keep the application permanently a.g.:  
+> cd /opt/git/  
+Clone the Git repo:  
+> git clone https://github.com/dodoslavn/nodevboxadmin  
+> cd nodevboxadmin
+Copy and edit configuration file:  
+> cp config/config.json.example config/config.json
+> editor config/config.json
+Set new username and password:  
+> node config/password-reset.js
+Test the application if it works:  
+> node server.js
+Install the application as a SystemD service:
+> config/systemd_install.sh
 ```
 
 Then open `http://127.0.0.1:3000` and log in.
