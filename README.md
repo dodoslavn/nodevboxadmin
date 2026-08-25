@@ -38,6 +38,9 @@ This tool will only see VMs which are configured in the same OS user.
 - Linux (developed against VirtualBox 7.2.x on Ubuntu/Debian)
 
 ## Installation
+Switch to OS user which have the VMs you want to manage, e.g.:
+> su - virtualbox
+
 Move to some folder where you will keep the application permanently a.g.:  
 > cd /opt/git/
 
