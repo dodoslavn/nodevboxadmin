@@ -58,8 +58,8 @@ Set new username and password:
 Test the application if it works:  
 > node server.js
 
-Install the application as a SystemD service:
-> config/systemd_install.sh
+Install the application as a SystemD service (run as root or with sudo):
+> config/systemd_install.sh <virtualbox os user>
 
 
 ## License
