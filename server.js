@@ -443,14 +443,16 @@ router.get('/networks', async (req, res) => {
   let bridgedIfs = [];
   let internalNets = [];
   let dhcpServers = [];
+  let networksConf = { path: '', exists: false, lines: [] };
   let error = query.get('error') || '';
   try {
-    [natNetworks, hostOnlyIfs, bridgedIfs, internalNets, dhcpServers] = await Promise.all([
+    [natNetworks, hostOnlyIfs, bridgedIfs, internalNets, dhcpServers, networksConf] = await Promise.all([
       vbox.listNatNetworks(),
       vbox.listHostOnlyInterfaces(),
       vbox.listBridgedInterfaces(),
       vbox.listInternalNetworks(),
       vbox.listDhcpServers(),
+      vbox.readNetworksConf(),
     ]);
   } catch (err) {
     error = error || `Could not list networks: ${err.message}`;
@@ -461,7 +463,7 @@ router.get('/networks', async (req, res) => {
     if (match) dhcpByInterface[iface.Name] = match;
   }
   html(res, networksPage({
-    natNetworks, hostOnlyIfs, dhcpByInterface, bridgedIfs, internalNets,
+    natNetworks, hostOnlyIfs, dhcpByInterface, bridgedIfs, internalNets, networksConf,
     username, error, notice: query.get('notice') || '',
   }));
 });
@@ -549,6 +551,24 @@ router.post('/networks/hostonly/:name/ipconfig', async (req, res, params) => {
   } catch (err) {
     await audit.logAction({ action: 'hostonly-ipconfig', vmName: null, result: 'error', message: err.message, actor: username });
     redirectWithFlash(res, '/networks', { error: `Could not update IP: ${err.message}` });
+  }
+});
+
+// Sets the adapter to obtain its IP via DHCP (client) instead of a static
+// address - for an externally-run DHCP server on that host-only network.
+// Not to be confused with /networks/hostonly/:name/dhcp/enable above, which
+// is VirtualBox's own DHCP *server* for that network - a different feature.
+router.post('/networks/hostonly/:name/ipconfig/dhcp', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+
+  try {
+    await vbox.setHostOnlyInterfaceDhcp(params.name);
+    await audit.logAction({ action: 'hostonly-ipconfig-dhcp', vmName: null, result: 'ok', message: params.name, actor: username });
+    redirectWithFlash(res, '/networks', { notice: `"${params.name}" set to obtain its IP automatically.` });
+  } catch (err) {
+    await audit.logAction({ action: 'hostonly-ipconfig-dhcp', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/networks', { error: `Could not switch to automatic: ${err.message}` });
   }
 });
 

@@ -72,6 +72,10 @@ function ipConfigFormHtml(iface) {
         <div class="field"><label>Netmask</label><input type="text" name="netmask" value="${escapeHtml(iface.NetworkMask || '')}" placeholder="255.255.255.0"></div>
         <button type="submit" class="btn-sm">Update IP</button>
       </form>
+      <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/ipconfig/dhcp" style="margin-top:0.5rem">
+        <button type="submit" class="btn-sm">Set to automatic (DHCP client)</button>
+        <span class="field-help">No static IP - this adapter gets its address from a DHCP server already on that network (e.g. one you run yourself, not VirtualBox's).</span>
+      </form>
     </details>`;
 }
 
@@ -117,8 +121,25 @@ function internalNetRows(names) {
   return names.map((n) => `<tr><td>${escapeHtml(n)}</td></tr>`).join('');
 }
 
+function networksConfHtml(networksConf) {
+  const conf = networksConf || { path: '/etc/vbox/networks.conf', exists: false, lines: [] };
+  if (conf.error) {
+    return `<p class="error">Could not read ${escapeHtml(conf.path)}: ${escapeHtml(conf.error)}</p>`;
+  }
+  if (!conf.exists) {
+    return `<p class="muted">No ${escapeHtml(conf.path)} - only VirtualBox's built-in default range is allowed: <code>192.168.56.0/21</code> (and its IPv6 equivalent). An IP outside the allowed range fails with a misleading "permission denied". Create that file (each line: <code>* &lt;CIDR&gt; ...</code>) to allow other subnets.</p>`;
+  }
+  if (!conf.lines.length) {
+    return `<p class="muted">${escapeHtml(conf.path)} exists but has no rules - nothing outside VirtualBox's default range (<code>192.168.56.0/21</code>) is allowed.</p>`;
+  }
+  const rows = conf.lines.map((l) => `<tr><td><code>${escapeHtml(l)}</code></td></tr>`).join('');
+  return `
+    <p class="muted">From ${escapeHtml(conf.path)} - an IP outside these ranges fails with a misleading "permission denied" when you try to set it below.</p>
+    <table><tbody>${rows}</tbody></table>`;
+}
+
 function networksPage({
-  natNetworks = [], hostOnlyIfs = [], dhcpByInterface = {}, bridgedIfs = [], internalNets = [],
+  natNetworks = [], hostOnlyIfs = [], dhcpByInterface = {}, bridgedIfs = [], internalNets = [], networksConf = null,
   username = '', error = '', notice = '',
 } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
@@ -147,6 +168,11 @@ function networksPage({
         <div class="field field-toggle"><label><input type="checkbox" name="dhcp" value="on" checked> Enable DHCP</label></div>
         <button type="submit">Add NAT network</button>
       </form>
+    </div>
+
+    <div class="card">
+      <h2>Allowed host-only/NAT subnets</h2>
+      ${networksConfHtml(networksConf)}
     </div>
 
     <div class="card">
