@@ -85,7 +85,7 @@ const BASE_CSS = `
   .btn-warn { background: #dc2626; }
   .btn-warn:hover { background: #b91c1c; }
   button:disabled { background: #cbd5e1; cursor: not-allowed; }
-  .actions { display: flex; }
+  .actions { display: flex; align-items: center; gap: 0.5rem; }
   table.kv th { text-align: left; width: 160px; color: #555; font-weight: 600; vertical-align: top; }
   table.kv td { word-break: break-all; }
   h2 { font-size: 1.1rem; margin-top: 0; }
