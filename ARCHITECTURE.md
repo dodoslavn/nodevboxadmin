@@ -61,6 +61,8 @@ data/
                              # saved cloud-config templates, see lib/cloudinit.js
   cloud-init/                # generated seed ISOs (unattended VM installs) -
                               # location configurable via CLOUD_INIT_DIR in config.json
+  vm-templates.json         # [ { "uuid", "note", "markedAt" }, ... ] -
+                             # VMs marked as clone sources, see lib/vmtemplates.js
 ```
 
 Live VM state (running/stopped/etc.) is **never persisted** — always fetched
@@ -148,6 +150,17 @@ nodevboxadmin/
   - `listIsos()` / `deleteIso(filename)` — plain filesystem listing/deletion
     under `CLOUD_INIT_DIR` (not `VBoxManage list dvds` — a freshly-built ISO
     isn't known to VirtualBox until attached to a VM at least once)
+- **`lib/vmtemplates.js`** — VM Templates (existing VMs marked as clone
+  sources - unrelated to `lib/cloudinit.js`'s templates above despite the
+  shared name)
+  - `listMarked()` / `mark({uuid, note})` (upsert) / `unmark(uuid)` — the
+    registry itself, via `lib/store.js` against `data/vm-templates.json`.
+    Only the UUID + note are persisted; the VM's name/existence is always
+    read live from `vbox.listVms()`
+  - `cloneFromTemplate({templateUuid, name}) -> Promise<{ok, uuid, name}>`
+    — full clone via `VBoxManage clonevm`. Pre-generates the UUID
+    (`crypto.randomUUID()`) and passes `--uuid`, since unlike `createvm`,
+    `clonevm`'s stdout has no parseable UUID to read back
 - **`lib/audit.js`**
   - `logAction({action, vmId, result}) -> Promise<void>` (appends one JSON
     line to `data/audit.log`)
@@ -178,6 +191,9 @@ nodevboxadmin/
 | POST | `/cloud-init/templates/:id/delete` | yes | — | 302 → `/cloud-init` (flash) | |
 | POST | `/cloud-init/build` | yes | form: `outputName`, `userData` | 302 → `/cloud-init` (flash) | Builds `<CLOUD_INIT_DIR>/<outputName>.iso` via `cloud-localds`. Fails clearly (flash error) if that file already exists or `cloud-localds` isn't found. |
 | POST | `/cloud-init/isos/:filename/delete` | yes | — | 302 → `/cloud-init` (flash) | |
+| POST | `/vm-templates/mark` | yes | form: `uuid`, `note?` | 302 → `/vms/new` (flash) | Marks an existing VM as a template via `lib/vmtemplates.js`. |
+| POST | `/vm-templates/:uuid/unmark` | yes | — | 302 → `/vms/new` (flash) | Registry only - never touches the actual VM. |
+| POST | `/vm-templates/create` | yes | form: `templateUuid`, `name` | 302 → `/vms/:newUuid` or `/vms/new` (flash) on error | Full clone via `VBoxManage clonevm`. |
 
 Notes:
 - All mutating routes (`POST`) go through `requireAuth` and should validate

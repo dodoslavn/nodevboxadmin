@@ -23,6 +23,7 @@ const auth = require('./lib/auth');
 const vmstatus = require('./lib/vmstatus');
 const vbox = require('./lib/vbox');
 const cloudinit = require('./lib/cloudinit');
+const vmtemplates = require('./lib/vmtemplates');
 const audit = require('./lib/audit');
 const hostinfo = require('./lib/hostinfo');
 const { createLimiter } = require('./lib/ratelimit');
@@ -236,6 +237,33 @@ router.post('/disks/create', async (req, res) => {
   } catch (err) {
     await audit.logAction({ action: 'disk-create', vmName: null, result: 'error', message: err.message, actor: username });
     redirectWithFlash(res, '/disks', { error: `Could not create disk: ${err.message}` });
+  }
+});
+
+// Registers an existing disk/ISO/floppy file with VirtualBox so it shows up
+// in the list above - does not attach it to any VM (use a VM's Storage tab
+// for that).
+router.post('/disks/register', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const filePath = (body.path || '').trim();
+  const kind = DISK_KINDS.includes(body.kind) ? body.kind : 'disk';
+
+  if (!filePath.startsWith('/')) {
+    const msg = 'Path must be absolute.';
+    await audit.logAction({ action: 'disk-register', vmName: null, result: 'error', message: msg, actor: username });
+    redirectWithFlash(res, '/disks', { error: msg });
+    return;
+  }
+
+  try {
+    await vbox.registerMedium(kind, filePath);
+    await audit.logAction({ action: 'disk-register', vmName: null, result: 'ok', message: filePath, actor: username });
+    redirectWithFlash(res, '/disks', { notice: `Registered ${filePath}.` });
+  } catch (err) {
+    await audit.logAction({ action: 'disk-register', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/disks', { error: `Could not register: ${err.message}` });
   }
 });
 
@@ -567,10 +595,32 @@ router.post('/networks/hostonly/:name/dhcp/remove', async (req, res, params) => 
 // shell injection).
 const VM_NAME_RE = /^[A-Za-z0-9 ._-]{1,64}$/;
 
+// Data for the two VM Templates cards on this page: the marked-templates
+// registry (lib/vmtemplates.js) cross-referenced against a live VM list, the
+// same way the Cloud-Init page cross-references its mount-to-VM picker.
+// Non-fatal on failure - the main "create a blank VM" form still works even
+// if this fails, so callers default to empty data rather than erroring the
+// whole page.
+async function buildTemplateData() {
+  const [marked, allVms] = await Promise.all([vmtemplates.listMarked(), vbox.listVms()]);
+  const vmByUuid = new Map(allVms.map((v) => [v.uuid, v.name]));
+  const markedTemplates = marked.map((t) => ({ ...t, name: vmByUuid.get(t.uuid) || null }));
+  const templates = markedTemplates.filter((t) => t.name).map((t) => ({ uuid: t.uuid, name: t.name }));
+  return { templates, allVms, markedTemplates };
+}
+
 router.get('/vms/new', async (req, res) => {
   if (!auth.requireAuth(req, res)) return;
   const username = await auth.currentUsername();
-  html(res, createVmPage({ username }));
+  const query = new URL(req.url, 'http://localhost').searchParams;
+  let error = query.get('error') || '';
+  let templateData = { templates: [], allVms: [], markedTemplates: [] };
+  try {
+    templateData = await buildTemplateData();
+  } catch (err) {
+    error = error || `Could not load templates: ${err.message}`;
+  }
+  html(res, createVmPage({ username, error, notice: query.get('notice') || '', ...templateData }));
 });
 
 router.post('/vms/new', async (req, res) => {
@@ -582,9 +632,15 @@ router.post('/vms/new', async (req, res) => {
   const username = await auth.currentUsername();
 
   if (!VM_NAME_RE.test(name)) {
+    const templateData = await buildTemplateData().catch(() => ({ templates: [], allVms: [], markedTemplates: [] }));
     html(
       res,
-      createVmPage({ username, error: 'VM name must be 1-64 chars: letters, digits, space, dot, dash, underscore.', form: body }),
+      createVmPage({
+        username,
+        error: 'VM name must be 1-64 chars: letters, digits, space, dot, dash, underscore.',
+        form: body,
+        ...templateData,
+      }),
       400
     );
     return;
@@ -596,7 +652,67 @@ router.post('/vms/new', async (req, res) => {
     redirect(res, '/dashboard');
   } catch (err) {
     await audit.logAction({ action: 'create', vmName: name, result: 'error', message: err.message, actor: username });
-    html(res, createVmPage({ username, error: `Could not create VM: ${err.message}`, form: body }), 502);
+    const templateData = await buildTemplateData().catch(() => ({ templates: [], allVms: [], markedTemplates: [] }));
+    html(res, createVmPage({ username, error: `Could not create VM: ${err.message}`, form: body, ...templateData }), 502);
+  }
+});
+
+// --- VM Templates: mark an existing VM as a clone source, or create a new
+// VM from one (see lib/vmtemplates.js). Surfaced entirely on the /vms/new
+// page above; these routes are just the mutations behind it. ---
+
+router.post('/vm-templates/mark', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const uuid = (body.uuid || '').trim();
+  const note = (body.note || '').trim();
+
+  try {
+    const vms = await vbox.listVms();
+    const vm = vms.find((v) => v.uuid === uuid);
+    if (!vm) throw new vbox.VBoxError('VM not found.', { code: 'NOT_FOUND' });
+    await vmtemplates.mark({ uuid, note });
+    await audit.logAction({ action: 'vm-template-mark', vmName: vm.name, result: 'ok', message: note, actor: username });
+    redirectWithFlash(res, '/vms/new', { notice: `Marked "${vm.name}" as a template.` });
+  } catch (err) {
+    await audit.logAction({ action: 'vm-template-mark', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/vms/new', { error: `Could not mark template: ${err.message}` });
+  }
+});
+
+router.post('/vm-templates/:uuid/unmark', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+  try {
+    await vmtemplates.unmark(params.uuid);
+    await audit.logAction({ action: 'vm-template-unmark', vmName: null, result: 'ok', message: params.uuid, actor: username });
+    redirectWithFlash(res, '/vms/new', { notice: 'Template unmarked.' });
+  } catch (err) {
+    await audit.logAction({ action: 'vm-template-unmark', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/vms/new', { error: `Could not unmark: ${err.message}` });
+  }
+});
+
+router.post('/vm-templates/create', async (req, res) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const templateUuid = (body.templateUuid || '').trim();
+  const name = (body.name || '').trim();
+
+  if (!VM_NAME_RE.test(name)) {
+    redirectWithFlash(res, '/vms/new', { error: 'VM name must be 1-64 chars: letters, digits, space, dot, dash, underscore.' });
+    return;
+  }
+
+  try {
+    const result = await vmtemplates.cloneFromTemplate({ templateUuid, name });
+    await audit.logAction({ action: 'vm-template-clone', vmName: name, result: 'ok', message: `from ${templateUuid}`, actor: username });
+    redirect(res, `/vms/${encodeURIComponent(result.uuid)}`);
+  } catch (err) {
+    await audit.logAction({ action: 'vm-template-clone', vmName: name, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/vms/new', { error: `Could not create VM from template: ${err.message}` });
   }
 });
 
@@ -762,7 +878,8 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
       busPortRanges: vbox.BUS_PORT_RANGE, error: flashError, notice: flashNotice,
-      attachIso: query.get('attachIso') || '',
+      attachMedium: query.get('attachMedium') || '',
+      attachType: query.get('attachType') || '',
     }));
   } catch (err) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });

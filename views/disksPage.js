@@ -60,6 +60,28 @@ function mediaRows(media) {
     .join('');
 }
 
+function registerDiskCard() {
+  return `
+    <div class="card">
+      <h2>Register an existing disk</h2>
+      <p class="muted">Adds a disk/ISO/floppy file VirtualBox doesn't know about yet to the list above (registers it without attaching it to any VM). Use a VM's Edit &rarr; Storage tab to actually attach it afterward.</p>
+      <form method="POST" action="/disks/register">
+        <div class="grid">
+          <div class="field"><label>Path</label><input type="text" name="path" required placeholder="/path/to/disk.vdi"></div>
+          <div class="field">
+            <label>Type</label>
+            <select name="kind">
+              <option value="disk">Hard disk</option>
+              <option value="dvd">DVD/ISO</option>
+              <option value="floppy">Floppy</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit">Register</button>
+      </form>
+    </div>`;
+}
+
 function disksPage({ media = [], diskFormats = [], username = '', error = '', notice = '' } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -76,6 +98,8 @@ function disksPage({ media = [], diskFormats = [], username = '', error = '', no
         <tbody>${mediaRows(media)}</tbody>
       </table>
     </div>
+
+    ${registerDiskCard()}
 
     <div class="card">
       <h2>Create a new disk</h2>

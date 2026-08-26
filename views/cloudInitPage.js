@@ -51,7 +51,7 @@ function isoRows(isos, vms) {
     .map(
       (iso) => `
       <tr>
-        <td style="word-break:break-all">${escapeHtml(iso.filename)}</td>
+        <td style="word-break:break-all">${escapeHtml(iso.path)}</td>
         <td>${escapeHtml(formatBytes(iso.sizeBytes))}</td>
         <td>${escapeHtml(new Date(iso.mtime).toLocaleString())}</td>
         <td>
@@ -119,7 +119,7 @@ function cloudInitPage({
     <div class="card">
       <h2>Generated ISOs</h2>
       <table>
-        <thead><tr><th>File</th><th>Size</th><th>Created</th><th></th></tr></thead>
+        <thead><tr><th>Path</th><th>Size</th><th>Created</th><th></th></tr></thead>
         <tbody>${isoRows(isos, vms)}</tbody>
       </table>
     </div>

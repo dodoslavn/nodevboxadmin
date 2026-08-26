@@ -81,7 +81,7 @@
         window.alert('Pick a VM first.');
         return;
       }
-      window.location.href = '/vms/' + encodeURIComponent(uuid) + '/edit?attachIso=' + encodeURIComponent(isoPath) + '#storage';
+      window.location.href = '/vms/' + encodeURIComponent(uuid) + '/edit?attachMedium=' + encodeURIComponent(isoPath) + '&attachType=dvddrive#storage';
     });
   });
 })();
