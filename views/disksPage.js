@@ -16,32 +16,43 @@ function parseInUseEntry(s) {
   return m ? { name: m[1].trim(), uuid: m[2] } : { name: s, uuid: null };
 }
 
-// For an attached medium, shows which VM(s) it's on (linked) plus a Detach
-// button per attachment. A medium is normally attached in exactly one place;
-// the loop just covers the rare multi-attach case rather than assuming one.
+// For an attached medium, shows which VM(s) it's on (linked). A medium is
+// normally attached in exactly one place; the loop just covers the rare
+// multi-attach case rather than assuming one.
 function usedByHtml(m) {
   if (!m.inUseByVMs || !m.inUseByVMs.length) return '<span class="muted">Not attached</span>';
   return m.inUseByVMs
     .map((s) => {
       const { name, uuid } = parseInUseEntry(s);
-      const link = uuid ? `<a href="/vms/${encodeURIComponent(uuid)}/edit">${escapeHtml(name)}</a>` : escapeHtml(name);
-      if (!uuid) return link;
-      return `${link}
+      return uuid ? `<a href="/vms/${encodeURIComponent(uuid)}/edit">${escapeHtml(name)}</a>` : escapeHtml(name);
+    })
+    .join(', ');
+}
+
+// One Detach button per attachment, in its own column (previously inline
+// with the VM name in the "Attached to" column).
+function detachButtonsHtml(m) {
+  if (!m.inUseByVMs || !m.inUseByVMs.length) return '';
+  return m.inUseByVMs
+    .map((s) => {
+      const { uuid } = parseInUseEntry(s);
+      if (!uuid) return '';
+      return `
         <form method="POST" action="/disks/${m.kind}/${encodeURIComponent(m.UUID)}/detach" style="display:inline"
               data-confirm-detach-disk="${escapeHtml(m.Location || m.UUID)}">
           <input type="hidden" name="vmUuid" value="${escapeHtml(uuid)}">
           <button type="submit" class="btn-sm btn-warn">Detach</button>
         </form>`;
     })
-    .join(', ');
+    .join('');
 }
 
 function mediaRows(media) {
-  if (!media.length) return '<tr><td colspan="5"><em>No virtual media registered.</em></td></tr>';
+  if (!media.length) return '<tr><td colspan="6"><em>No virtual media registered.</em></td></tr>';
   return media
     .map((m) => {
       const attached = m.inUseByVMs && m.inUseByVMs.length;
-      const actions = attached
+      const deleteAction = attached
         ? '<span class="muted">Detach first to delete</span>'
         : `
           <form method="POST" action="/disks/${m.kind}/${encodeURIComponent(m.UUID)}/delete" style="display:inline"
@@ -54,7 +65,8 @@ function mediaRows(media) {
         <td style="word-break:break-all">${escapeHtml(m.Location || '')}</td>
         <td>${escapeHtml(m.Capacity || '')}</td>
         <td>${usedByHtml(m)}</td>
-        <td>${actions}</td>
+        <td>${detachButtonsHtml(m)}</td>
+        <td>${deleteAction}</td>
       </tr>`;
     })
     .join('');
@@ -94,7 +106,7 @@ function disksPage({ media = [], diskFormats = [], username = '', error = '', no
       ${errorHtml}
       ${noticeHtml}
       <table>
-        <thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Attached to</th><th></th></tr></thead>
+        <thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Attached to</th><th></th><th></th></tr></thead>
         <tbody>${mediaRows(media)}</tbody>
       </table>
     </div>
