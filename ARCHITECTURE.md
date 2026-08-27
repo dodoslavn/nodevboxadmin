@@ -160,6 +160,17 @@ nodevboxadmin/
   - `listIsos()` / `deleteIso(filename)` — plain filesystem listing/deletion
     under `CLOUD_INIT_DIR` (not `VBoxManage list dvds` — a freshly-built ISO
     isn't known to VirtualBox until attached to a VM at least once)
+- **`lib/medialibrary.js`** — ISO / disk image library (two configurable
+  folders an admin can drop files into, listed on the Disks page with an
+  "Add to VirtualBox" button per file)
+  - `listIsoLibrary()` / `listDiskLibrary()` — plain filesystem listing
+    (not a live watch) under `ISO_LIBRARY_DIR`/`DISK_LIBRARY_DIR`, same
+    ENOENT-tolerant shape as `lib/cloudinit.js`'s `listIsos()`. Returns `[]`
+    if the corresponding config key is unset
+  - "Add to VirtualBox" reuses the existing `POST /disks/register` route
+    (`vbox.registerMedium`, via `showmediuminfo`) rather than a dedicated
+    route - same mechanism as the Disks page's "Register an existing disk"
+    form, just pre-filled with the library file's path/kind
 - **`lib/vmtemplates.js`** — VM Templates (existing VMs marked as clone
   sources - unrelated to `lib/cloudinit.js`'s templates above despite the
   shared name)

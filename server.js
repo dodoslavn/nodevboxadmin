@@ -23,6 +23,7 @@ const auth = require('./lib/auth');
 const vmstatus = require('./lib/vmstatus');
 const vbox = require('./lib/vbox');
 const cloudinit = require('./lib/cloudinit');
+const medialibrary = require('./lib/medialibrary');
 const vmtemplates = require('./lib/vmtemplates');
 const audit = require('./lib/audit');
 const hostinfo = require('./lib/hostinfo');
@@ -204,13 +205,24 @@ router.get('/disks', async (req, res) => {
   const username = await auth.currentUsername();
   const query = new URL(req.url, 'http://localhost').searchParams;
   let media = [];
+  let isoLibrary = [];
+  let diskLibrary = [];
   let error = query.get('error') || '';
   try {
-    media = await vbox.listAllMedia();
+    [media, isoLibrary, diskLibrary] = await Promise.all([
+      vbox.listAllMedia(),
+      medialibrary.listIsoLibrary(),
+      medialibrary.listDiskLibrary(),
+    ]);
   } catch (err) {
     error = error || `Could not list virtual media: ${err.message}`;
   }
-  html(res, disksPage({ media, diskFormats: vbox.DISK_FORMATS, username, error, notice: query.get('notice') || '' }));
+  html(res, disksPage({
+    media, isoLibrary, diskLibrary,
+    isoLibraryDir: medialibrary.ISO_LIBRARY_DIR,
+    diskLibraryDir: medialibrary.DISK_LIBRARY_DIR,
+    diskFormats: vbox.DISK_FORMATS, username, error, notice: query.get('notice') || '',
+  }));
 });
 
 router.post('/disks/create', async (req, res) => {

@@ -75,6 +75,48 @@ function mediaRows(media) {
     .join('');
 }
 
+function formatBytes(n) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function libraryRows(files, kind) {
+  return files
+    .map(
+      (f) => `
+      <tr>
+        <td style="word-break:break-all">${escapeHtml(f.path)}</td>
+        <td>${escapeHtml(formatBytes(f.sizeBytes))}</td>
+        <td>${escapeHtml(new Date(f.mtime).toLocaleString())}</td>
+        <td>
+          <form method="POST" action="/disks/register" style="display:inline">
+            <input type="hidden" name="path" value="${escapeHtml(f.path)}">
+            <input type="hidden" name="kind" value="${kind}">
+            <button type="submit" class="btn-sm">Add to VirtualBox</button>
+          </form>
+        </td>
+      </tr>`
+    )
+    .join('');
+}
+
+function libraryCard({ title, dirLabel, dir, files, kind }) {
+  let body;
+  if (!dir) {
+    body = `<p class="muted">Not configured - set <code>${escapeHtml(dirLabel)}</code> in <code>config/config.json</code>.</p>`;
+  } else if (!files.length) {
+    body = `<p class="muted">No files found in <code>${escapeHtml(dir)}</code>.</p>`;
+  } else {
+    body = `
+      <table>
+        <thead><tr><th>Path</th><th>Size</th><th>Modified</th><th></th></tr></thead>
+        <tbody>${libraryRows(files, kind)}</tbody>
+      </table>`;
+  }
+  return `<div class="card"><h2>${escapeHtml(title)}</h2>${body}</div>`;
+}
+
 function registerDiskCard() {
   return `
     <div class="card">
@@ -97,7 +139,10 @@ function registerDiskCard() {
     </div>`;
 }
 
-function disksPage({ media = [], diskFormats = [], username = '', error = '', notice = '' } = {}) {
+function disksPage({
+  media = [], isoLibrary = [], diskLibrary = [], isoLibraryDir = '', diskLibraryDir = '',
+  diskFormats = [], username = '', error = '', notice = '',
+} = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
   const formatOpts = diskFormats.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
@@ -115,6 +160,10 @@ function disksPage({ media = [], diskFormats = [], username = '', error = '', no
     </div>
 
     ${registerDiskCard()}
+
+    ${libraryCard({ title: 'ISO Library', dirLabel: 'ISO_LIBRARY_DIR', dir: isoLibraryDir, files: isoLibrary, kind: 'dvd' })}
+
+    ${libraryCard({ title: 'Disk Image Library', dirLabel: 'DISK_LIBRARY_DIR', dir: diskLibraryDir, files: diskLibrary, kind: 'disk' })}
 
     <div class="card">
       <h2>Create a new disk</h2>

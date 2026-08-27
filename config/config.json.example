@@ -10,6 +10,8 @@
   "VBOXNETADPCTL_BIN": "/usr/lib/virtualbox/VBoxNetAdpCtl",
   "CLOUD_INIT_DIR": "data/cloud-init",
   "CLOUD_LOCALDS_BIN": "cloud-localds",
+  "ISO_LIBRARY_DIR": "",
+  "DISK_LIBRARY_DIR": "",
   "SCRYPT_PARAMS": { "N": 16384, "r": 8, "p": 1 },
   "SCRYPT_KEYLEN": 64,
   "LOGIN_RATE": { "windowMs": 900000, "max": 10 },

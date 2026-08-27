@@ -142,6 +142,8 @@ directly, etc.).
 | `VBOXMANAGE_BIN` | `"VBoxManage"` | Path to the VBoxManage binary, if not on `PATH`. |
 | `CLOUD_LOCALDS_BIN` | `"cloud-localds"` | Path to the `cloud-localds` binary (from `cloud-image-utils`), if not on `PATH`. Used by the Cloud-Init ISO builder. |
 | `CLOUD_INIT_DIR` | `"data/cloud-init"` | Where generated cloud-init seed ISOs (for unattended VM installs) are written. Relative paths resolve against the repo root; use an absolute path to store them elsewhere (e.g. a larger disk). |
+| `ISO_LIBRARY_DIR` | `""` | Folder to scan for `.iso` files, shown on the Disks page with a one-click "Add to VirtualBox" button per file. Relative paths resolve against the repo root; leave `""` to disable. |
+| `DISK_LIBRARY_DIR` | `""` | Folder to scan for disk images (`.vdi`/`.vmdk`/`.vhd`/`.qcow2`), shown the same way on the Disks page. Relative paths resolve against the repo root; leave `""` to disable. |
 
 The rest of `config/config.json` (session TTL, scrypt cost, rate limits,
 etc.) is exposed the same way - edit the field, restart the service.
