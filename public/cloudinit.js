@@ -66,22 +66,3 @@
     });
   });
 })();
-
-// "Mount to VM": send the admin to that VM's Edit page, Storage tab, with
-// the ISO path pre-filled into the existing attach form - no separate
-// attach flow, just a shortcut into the one that already exists.
-(function () {
-  document.querySelectorAll('[data-mount-iso-btn]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var row = btn.closest('tr');
-      var select = row ? row.querySelector('[data-mount-vm-select]') : null;
-      var uuid = select ? select.value : '';
-      var isoPath = btn.getAttribute('data-iso-path');
-      if (!uuid) {
-        window.alert('Pick a VM first.');
-        return;
-      }
-      window.location.href = '/vms/' + encodeURIComponent(uuid) + '/edit?attachMedium=' + encodeURIComponent(isoPath) + '&attachType=dvddrive#storage';
-    });
-  });
-})();

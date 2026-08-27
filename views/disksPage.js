@@ -59,10 +59,13 @@ function mediaRows(media) {
                 data-confirm-delete-medium="${escapeHtml(m.Location || m.UUID)}">
             <button type="submit" class="btn-sm danger">Delete</button>
           </form>`;
+      const missingBadge = m.existsOnDisk
+        ? ''
+        : ' <span class="badge badge-missing" title="Registered with VirtualBox, but no file exists at this path">Missing</span>';
       return `
       <tr>
         <td>${escapeHtml(KIND_LABELS[m.kind] || m.kind)}</td>
-        <td style="word-break:break-all">${escapeHtml(m.Location || '')}</td>
+        <td style="word-break:break-all">${escapeHtml(m.Location || '')}${missingBadge}</td>
         <td>${escapeHtml(m.Capacity || '')}</td>
         <td>${usedByHtml(m)}</td>
         <td>${detachButtonsHtml(m)}</td>

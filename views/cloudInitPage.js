@@ -44,9 +44,8 @@ function templateDeleteRows(templates) {
     </table>`;
 }
 
-function isoRows(isos, vms) {
+function isoRows(isos) {
   if (!isos.length) return '<tr><td colspan="4"><em>No ISOs generated yet.</em></td></tr>';
-  const vmOptions = vms.map((vm) => `<option value="${escapeHtml(vm.uuid)}">${escapeHtml(vm.name)}</option>`).join('');
   return isos
     .map(
       (iso) => `
@@ -55,14 +54,10 @@ function isoRows(isos, vms) {
         <td>${escapeHtml(formatBytes(iso.sizeBytes))}</td>
         <td>${escapeHtml(new Date(iso.mtime).toLocaleString())}</td>
         <td>
-          <span class="actions">
-            <select data-mount-vm-select style="width:auto;display:inline-block">${vmOptions}</select>
-            <button type="button" class="btn-sm" data-mount-iso-btn data-iso-path="${escapeHtml(iso.path)}">Mount to VM</button>
-            <form method="POST" action="/cloud-init/isos/${encodeURIComponent(iso.filename)}/delete" style="display:inline"
-                  data-confirm-delete-iso="${escapeHtml(iso.filename)}">
-              <button type="submit" class="btn-sm danger">Delete</button>
-            </form>
-          </span>
+          <form method="POST" action="/cloud-init/isos/${encodeURIComponent(iso.filename)}/delete" style="display:inline"
+                data-confirm-delete-iso="${escapeHtml(iso.filename)}">
+            <button type="submit" class="btn-sm danger">Delete</button>
+          </form>
         </td>
       </tr>`
     )
@@ -72,7 +67,6 @@ function isoRows(isos, vms) {
 function cloudInitPage({
   templates = [],
   isos = [],
-  vms = [],
   defaultTemplate = '',
   username = '',
   error = '',
@@ -120,7 +114,7 @@ function cloudInitPage({
       <h2>Generated ISOs</h2>
       <table>
         <thead><tr><th>Path</th><th>Size</th><th>Created</th><th></th></tr></thead>
-        <tbody>${isoRows(isos, vms)}</tbody>
+        <tbody>${isoRows(isos)}</tbody>
       </table>
     </div>
 

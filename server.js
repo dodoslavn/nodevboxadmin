@@ -344,10 +344,9 @@ router.get('/cloud-init', async (req, res) => {
   const query = new URL(req.url, 'http://localhost').searchParams;
   let templates = [];
   let isos = [];
-  let vms = [];
   let error = query.get('error') || '';
   try {
-    [templates, isos, vms] = await Promise.all([cloudinit.listTemplates(), cloudinit.listIsos(), vbox.listVms()]);
+    [templates, isos] = await Promise.all([cloudinit.listTemplates(), cloudinit.listIsos()]);
   } catch (err) {
     error = error || `Could not load Cloud-Init page: ${err.message}`;
   }
@@ -356,7 +355,6 @@ router.get('/cloud-init', async (req, res) => {
     cloudInitPage({
       templates,
       isos,
-      vms,
       defaultTemplate: cloudinit.DEFAULT_TEMPLATE,
       username,
       error,
@@ -907,8 +905,6 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
       busPortRanges: vbox.BUS_PORT_RANGE, natRules, error: flashError, notice: flashNotice,
-      attachMedium: query.get('attachMedium') || '',
-      attachType: query.get('attachType') || '',
     }));
   } catch (err) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
