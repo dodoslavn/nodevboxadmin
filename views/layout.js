@@ -89,7 +89,7 @@ const BASE_CSS = `
   table.kv th { text-align: left; width: 160px; color: #555; font-weight: 600; vertical-align: top; }
   table.kv td { word-break: break-all; }
   h2 { font-size: 1.1rem; margin-top: 0; }
-  fieldset { border: 1px solid #e0e0e0; border-radius: 6px; margin: 0 0 1.2rem; padding: 0.5rem 1rem 1rem; }
+  fieldset { border: 1px solid #e0e0e0; border-radius: 6px; margin: 1.2rem 0; padding: 0.5rem 1rem 1rem; }
   legend { font-weight: 600; color: #374151; padding: 0 0.4rem; }
   .field { margin: 0.6rem 0; }
   .field label { margin: 0 0 0.25rem; }
