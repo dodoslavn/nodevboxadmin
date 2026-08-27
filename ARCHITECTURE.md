@@ -135,6 +135,16 @@ nodevboxadmin/
   - Internal: `runVBoxManage(args, timeoutMs) -> Promise<{stdout, stderr}>`,
     the single choke point all the above call through — this is where
     `execFile` + timeout + error normalization lives
+  - `getNatRules(uuid) -> Promise<{[nicIndex]: Array<{name, protocol, hostIp, hostPort, guestIp, guestPort}>}>`
+    — per-VM NAT port-forwarding rules for `nat`-attached NICs. Does its own
+    raw-text walk of `showvminfo --machinereadable` output (tracking the
+    most recent `nicN=` line as state) rather than going through
+    `getVmInfo`/`parseNics` — confirmed by testing that VBox's own
+    `Forwarding(0)=`, `Forwarding(1)=`, ... index resets to 0 per-NIC with
+    no NIC number in the key, so two NAT-attached NICs both produce
+    `Forwarding(0)=`, which the generic flat parser would collide/overwrite
+  - `addNatRule(uuid, nicIndex, {...})` / `deleteNatRule(uuid, nicIndex, name)`
+    — via `modifyvm --nat-pfN`
 - **`lib/store.js`**
   - `readJson(path) -> Promise<object>`
   - `writeJson(path, data) -> Promise<void>` (queued per-file to serialize
@@ -194,6 +204,8 @@ nodevboxadmin/
 | POST | `/vm-templates/mark` | yes | form: `uuid`, `note?` | 302 → `/vms/new` (flash) | Marks an existing VM as a template via `lib/vmtemplates.js`. |
 | POST | `/vm-templates/:uuid/unmark` | yes | — | 302 → `/vms/new` (flash) | Registry only - never touches the actual VM. |
 | POST | `/vm-templates/create` | yes | form: `templateUuid`, `name` | 302 → `/vms/:newUuid` or `/vms/new` (flash) on error | Full clone via `VBoxManage clonevm`. |
+| POST | `/vms/:uuid/nic/:n/nat-pf` | yes | form: `name`, `protocol`, `hostIp?`, `hostPort`, `guestIp?`, `guestPort` | 302 → `/vms/:uuid/edit#network` (flash) | Adds a NAT port-forward rule to NIC `:n` (must be `nat`-attached). |
+| POST | `/vms/:uuid/nic/:n/nat-pf/:name/delete` | yes | — | 302 → `/vms/:uuid/edit#network` (flash) | |
 
 Notes:
 - All mutating routes (`POST`) go through `requireAuth` and should validate

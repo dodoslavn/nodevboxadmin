@@ -752,12 +752,18 @@ function wantsJson(req) {
 // query string on the redirect (a classic "flash message") lets the GET
 // handler show it after the redirect, instead of failures being logged to
 // the audit trail but never actually shown to whoever clicked the button.
-function redirectWithFlash(res, path, { error, notice } = {}) {
+function redirectWithFlash(res, path, { error, notice, hash } = {}) {
   const qs = new URLSearchParams();
   if (error) qs.set('error', error);
   if (notice) qs.set('notice', notice);
   const suffix = qs.toString();
-  redirect(res, suffix ? `${path}?${suffix}` : path);
+  // Query string comes before the hash fragment in a valid URL - a fragment
+  // stuck in the middle (`...#network?notice=...`) never reaches the server
+  // at all, since browsers strip everything from # onward before sending
+  // the request. `hash` is appended last, after the query string, for
+  // exactly this reason.
+  const base = suffix ? `${path}?${suffix}` : path;
+  redirect(res, hash ? `${base}#${hash}` : base);
 }
 
 function respondAction(req, res, { ok, status, message }) {
@@ -835,6 +841,9 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
   const flashNotice = query.get('notice') || '';
   try {
     const info = await vbox.getVmInfo(params.uuid);
+    // Non-fatal: NAT rules are a small extra section of the page, not core
+    // to it - a failure here shouldn't block viewing/editing everything else.
+    const natRules = await vbox.getNatRules(params.uuid).catch(() => ({}));
     const vm = {
       uuid: params.uuid,
       name: info.name || '',
@@ -897,7 +906,7 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
     const storage = vbox.parseStorage(info);
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
-      busPortRanges: vbox.BUS_PORT_RANGE, error: flashError, notice: flashNotice,
+      busPortRanges: vbox.BUS_PORT_RANGE, natRules, error: flashError, notice: flashNotice,
       attachMedium: query.get('attachMedium') || '',
       attachType: query.get('attachType') || '',
     }));
@@ -1354,6 +1363,54 @@ router.post('/vms/:uuid/sharedfolders/:name/remove', async (req, res, params) =>
   } catch (err) {
     await audit.logAction({ action: 'sharedfolder-remove', vmName: params.name, result: 'error', message: err.message, actor: username });
     redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { error: `Could not remove shared folder: ${err.message}` });
+  }
+});
+
+// --- NAT port-forwarding rules (for a NIC attached as plain "nat" - see
+// lib/vbox.js getNatRules/addNatRule/deleteNatRule for why these need their
+// own raw-text parse rather than going through getVmInfo) ---
+
+const NAT_RULE_NAME_RE = /^[A-Za-z0-9 ._-]{1,64}$/;
+const NAT_PROTOCOLS = ['tcp', 'udp'];
+
+router.post('/vms/:uuid/nic/:n/nat-pf', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const name = (body.name || '').trim();
+  const protocol = NAT_PROTOCOLS.includes(body.protocol) ? body.protocol : 'tcp';
+  const hostIp = (body.hostIp || '').trim();
+  const guestIp = (body.guestIp || '').trim();
+  const hostPort = Math.min(Math.max(parseInt(body.hostPort, 10) || 0, 1), 65535);
+  const guestPort = Math.min(Math.max(parseInt(body.guestPort, 10) || 0, 1), 65535);
+
+  if (!NAT_RULE_NAME_RE.test(name) || (hostIp && !IPV4_RE.test(hostIp)) || (guestIp && !IPV4_RE.test(guestIp))) {
+    const msg = 'Rule needs a name (1-64 chars); host/guest IP (if given) must look like 192.168.1.1.';
+    await audit.logAction({ action: 'nic-nat-rule-add', vmName: name, result: 'error', message: msg, actor: username });
+    redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { error: msg });
+    return;
+  }
+
+  try {
+    await vbox.addNatRule(params.uuid, params.n, { name, protocol, hostIp, hostPort, guestIp, guestPort });
+    await audit.logAction({ action: 'nic-nat-rule-add', vmName: name, result: 'ok', message: `adapter ${params.n}`, actor: username });
+    redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { notice: `Added rule "${name}".`, hash: 'network' });
+  } catch (err) {
+    await audit.logAction({ action: 'nic-nat-rule-add', vmName: name, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { error: `Could not add rule: ${err.message}`, hash: 'network' });
+  }
+});
+
+router.post('/vms/:uuid/nic/:n/nat-pf/:name/delete', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const username = await auth.currentUsername();
+  try {
+    await vbox.deleteNatRule(params.uuid, params.n, params.name);
+    await audit.logAction({ action: 'nic-nat-rule-delete', vmName: params.name, result: 'ok', message: `adapter ${params.n}`, actor: username });
+    redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { notice: `Deleted rule "${params.name}".`, hash: 'network' });
+  } catch (err) {
+    await audit.logAction({ action: 'nic-nat-rule-delete', vmName: params.name, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, `/vms/${encodeURIComponent(params.uuid)}/edit`, { error: `Could not delete rule: ${err.message}`, hash: 'network' });
   }
 });
 

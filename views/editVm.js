@@ -327,6 +327,78 @@ function usbFiltersSection(vm, filters) {
     </div>`;
 }
 
+function natRuleRows(vm, nicIndex, rules) {
+  if (!rules.length) return '<tr><td colspan="5"><em>No rules yet.</em></td></tr>';
+  return rules
+    .map(
+      (r) => `
+      <tr>
+        <td>${escapeHtml(r.name)}</td>
+        <td>${escapeHtml(r.protocol)}</td>
+        <td>${escapeHtml(r.hostIp || '*')}:${escapeHtml(r.hostPort)}</td>
+        <td>${escapeHtml(r.guestIp || '*')}:${escapeHtml(r.guestPort)}</td>
+        <td>
+          <form method="POST" action="/vms/${encodeURIComponent(vm.uuid)}/nic/${nicIndex}/nat-pf/${encodeURIComponent(r.name)}/delete" style="display:inline">
+            <button type="submit" class="btn-sm btn-warn">Delete</button>
+          </form>
+        </td>
+      </tr>`
+    )
+    .join('');
+}
+
+function natAdapterBlock(vm, nicIndex, rules) {
+  return `
+    <div style="border-top:1px solid #eee;padding-top:0.6rem;margin-top:0.6rem">
+      <strong>Adapter ${nicIndex}</strong>
+      <table>
+        <thead><tr><th>Name</th><th>Proto</th><th>Host</th><th>Guest</th><th></th></tr></thead>
+        <tbody>${natRuleRows(vm, nicIndex, rules)}</tbody>
+      </table>
+      <details style="margin-top:0.3rem">
+        <summary class="muted" style="cursor:pointer;font-size:0.85rem">Add a rule&hellip;</summary>
+        <form method="POST" action="/vms/${encodeURIComponent(vm.uuid)}/nic/${nicIndex}/nat-pf" style="margin-top:0.5rem">
+          <div class="grid">
+            <div class="field"><label>Name</label><input type="text" name="name" maxlength="64" required placeholder="e.g. ssh"></div>
+            <div class="field">
+              <label>Protocol</label>
+              <select name="protocol"><option value="tcp">TCP</option><option value="udp">UDP</option></select>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="field"><label>Host IP (blank = any)</label><input type="text" name="hostIp" placeholder="127.0.0.1"></div>
+            <div class="field"><label>Host port</label><input type="number" name="hostPort" min="1" max="65535" required placeholder="2222"></div>
+          </div>
+          <div class="grid">
+            <div class="field"><label>Guest IP (blank = any)</label><input type="text" name="guestIp" placeholder="10.0.2.15"></div>
+            <div class="field"><label>Guest port</label><input type="number" name="guestPort" min="1" max="65535" required placeholder="22"></div>
+          </div>
+          <button type="submit" class="btn-sm">Add rule</button>
+        </form>
+      </details>
+    </div>`;
+}
+
+// Per-VM NAT port-forwarding rules for each NIC currently attached as plain
+// "nat" (see lib/vbox.js getNatRules/addNatRule/deleteNatRule for why these
+// need their own raw-text parse rather than going through getVmInfo). Lives
+// OUTSIDE the main settings <form>, same reasoning as Storage/USB/Shared
+// Folders: must reflect the VM's actual saved NIC attachment, not whatever
+// an unsubmitted <select> in the form above currently shows.
+function natRulesSection(vm, nics, natRules) {
+  const natNics = nics.filter((n) => n.attachment === 'nat');
+  const body = natNics.length
+    ? natNics.map((n) => natAdapterBlock(vm, n.index, natRules[n.index] || [])).join('')
+    : '<p class="muted">No adapters are set to NAT.</p>';
+  return `
+    <div class="tab-panel" data-tab-panel="network">
+      <fieldset>
+        <legend>NAT Port Forwarding</legend>
+        ${body}
+      </fieldset>
+    </div>`;
+}
+
 function sharedFolderRows(vm, folders) {
   if (!folders.length) return '<tr><td colspan="3"><em>No shared folders yet.</em></td></tr>';
   return folders
@@ -372,7 +444,7 @@ function sharedFoldersSection(vm, folders) {
 }
 
 // `vm` = full parsed settings (see server route). Fields default to '' if unknown.
-function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, attachMedium = '', attachType = '' } = {}) {
+function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, natRules = {}, attachMedium = '', attachType = '' } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
 
@@ -568,6 +640,8 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
       ${usbFiltersSection(vm, usbFilters)}
 
       ${sharedFoldersSection(vm, sharedFolders)}
+
+      ${natRulesSection(vm, nics, natRules)}
 
       <div class="tab-panel" data-tab-panel="storage">
         ${storageSection(vm, storage, storageBuses, diskFormats, busPortRanges, attachMedium, attachType)}
