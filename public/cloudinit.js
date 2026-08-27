@@ -2,8 +2,8 @@
 
 // Cloud-Init page: template picker (fills the shared form from a
 // data-templates JSON blob - same idiom as data-port-ranges in
-// editVmTabs.js), confirm-before-submit for template/ISO delete (same
-// pattern as public/disks.js), and the "Mount to VM" redirect.
+// editVmTabs.js) and confirm-before-submit for template/ISO delete (same
+// pattern as public/disks.js).
 
 (function () {
   var form = document.getElementById('cloud-init-form');

@@ -153,10 +153,17 @@ nodevboxadmin/
   - `listTemplates()` / `saveTemplate({id, name, userData})` (upsert) /
     `deleteTemplate(id)` — saved cloud-config templates, via `lib/store.js`
     against `data/cloud-init-templates.json`
-  - `buildIso({userData, hostname, isoName}) -> Promise<{ok, path, filename}>`
-    — substitutes `{{HOSTNAME}}` in `userData`, auto-generates `meta-data`
-    (fresh `instance-id` + `local-hostname`), shells out to `cloud-localds`
-    to pack both into `<CLOUD_INIT_DIR>/<isoName>.iso`
+  - `buildIso({userData, metaData, networkConfig, isoName}) -> Promise<{ok, path, filename}>`
+    — `metaData` is caller-supplied JSON (valid YAML too, which is all
+    NoCloud requires); `instance-id` is always overwritten with a fresh
+    UUID regardless of what's passed in, so cloud-init reliably treats each
+    build as a new instance. `{{HOSTNAME}}` in `userData` is substituted
+    from `metaData`'s `local-hostname` - the single source of hostname,
+    fixing an earlier version that derived it separately from `isoName`
+    and could silently conflict with a `hostname:` already set in
+    `userData`. `networkConfig` (optional, raw YAML) is written as a third
+    seed file via `cloud-localds -N`. All three get packed into
+    `<CLOUD_INIT_DIR>/<isoName>.iso`
   - `listIsos()` / `deleteIso(filename)` — plain filesystem listing/deletion
     under `CLOUD_INIT_DIR` (not `VBoxManage list dvds` — a freshly-built ISO
     isn't known to VirtualBox until attached to a VM at least once)
@@ -210,7 +217,7 @@ nodevboxadmin/
 | GET | `/cloud-init` | yes | — | HTML | Template editor, generated-ISO list, default template. |
 | POST | `/cloud-init/templates/save` | yes | form: `id?`, `name`, `userData` | 302 → `/cloud-init` (flash) | Upsert a saved template via `lib/cloudinit.js`. |
 | POST | `/cloud-init/templates/:id/delete` | yes | — | 302 → `/cloud-init` (flash) | |
-| POST | `/cloud-init/build` | yes | form: `outputName`, `userData` | 302 → `/cloud-init` (flash) | Builds `<CLOUD_INIT_DIR>/<outputName>.iso` via `cloud-localds`. Fails clearly (flash error) if that file already exists or `cloud-localds` isn't found. |
+| POST | `/cloud-init/build` | yes | form: `outputName`, `userData`, `metaData`, `networkConfig?` | 302 → `/cloud-init` (flash) | Builds `<CLOUD_INIT_DIR>/<outputName>.iso` via `cloud-localds`. Fails clearly (flash error) if that file already exists, `metaData` isn't valid JSON, `cloud-localds` isn't found, or `userData` has `{{HOSTNAME}}` with no `local-hostname` set. |
 | POST | `/cloud-init/isos/:filename/delete` | yes | — | 302 → `/cloud-init` (flash) | |
 | POST | `/vm-templates/mark` | yes | form: `uuid`, `note?` | 302 → `/vms/new` (flash) | Marks an existing VM as a template via `lib/vmtemplates.js`. |
 | POST | `/vm-templates/:uuid/unmark` | yes | — | 302 → `/vms/new` (flash) | Registry only - never touches the actual VM. |

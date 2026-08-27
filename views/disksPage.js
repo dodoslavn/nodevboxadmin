@@ -53,11 +53,11 @@ function mediaRows(media) {
     .map((m) => {
       const attached = m.inUseByVMs && m.inUseByVMs.length;
       const deleteAction = attached
-        ? '<span class="muted">Detach first to delete</span>'
+        ? '<span class="muted">Detach first to remove</span>'
         : `
           <form method="POST" action="/disks/${m.kind}/${encodeURIComponent(m.UUID)}/delete" style="display:inline"
                 data-confirm-delete-medium="${escapeHtml(m.Location || m.UUID)}">
-            <button type="submit" class="btn-sm danger">Delete</button>
+            <button type="submit" class="btn-sm danger">Remove</button>
           </form>`;
       const missingBadge = m.existsOnDisk
         ? ''

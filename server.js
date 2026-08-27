@@ -217,6 +217,9 @@ router.get('/disks', async (req, res) => {
   } catch (err) {
     error = error || `Could not list virtual media: ${err.message}`;
   }
+  const registeredPaths = new Set(media.map((m) => m.Location && path.resolve(m.Location)).filter(Boolean));
+  isoLibrary = isoLibrary.filter((f) => !registeredPaths.has(path.resolve(f.path)));
+  diskLibrary = diskLibrary.filter((f) => !registeredPaths.has(path.resolve(f.path)));
   html(res, disksPage({
     media, isoLibrary, diskLibrary,
     isoLibraryDir: medialibrary.ISO_LIBRARY_DIR,
@@ -294,12 +297,12 @@ router.post('/disks/:kind/:uuid/delete', async (req, res, params) => {
     const record = media.find((m) => m.kind === kind && m.UUID === params.uuid);
     if (!record) throw new vbox.VBoxError('Medium not found.', { code: 'NOT_FOUND' });
     if (record.inUseByVMs.length) throw new vbox.VBoxError('Still attached to a VM - detach it there first.', { code: 'IN_USE' });
-    await vbox.deleteUnattachedMedium(kind, params.uuid);
-    await audit.logAction({ action: 'disk-delete', vmName: null, result: 'ok', message: record.Location, actor: username });
-    redirectWithFlash(res, '/disks', { notice: `Deleted ${record.Location}.` });
+    await vbox.unregisterMedium(kind, params.uuid);
+    await audit.logAction({ action: 'disk-unregister', vmName: null, result: 'ok', message: record.Location, actor: username });
+    redirectWithFlash(res, '/disks', { notice: `Removed ${record.Location} from VirtualBox (file kept on disk).` });
   } catch (err) {
-    await audit.logAction({ action: 'disk-delete', vmName: null, result: 'error', message: err.message, actor: username });
-    redirectWithFlash(res, '/disks', { error: `Could not delete: ${err.message}` });
+    await audit.logAction({ action: 'disk-unregister', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/disks', { error: `Could not remove: ${err.message}` });
   }
 });
 
@@ -368,6 +371,7 @@ router.get('/cloud-init', async (req, res) => {
       templates,
       isos,
       defaultTemplate: cloudinit.DEFAULT_TEMPLATE,
+      defaultMetaData: cloudinit.DEFAULT_META_DATA,
       username,
       error,
       notice: query.get('notice') || '',
@@ -412,9 +416,11 @@ router.post('/cloud-init/build', async (req, res) => {
   const username = await auth.currentUsername();
   const outputName = (body.outputName || '').trim();
   const userData = body.userData || '';
+  const metaData = body.metaData || '';
+  const networkConfig = body.networkConfig || '';
 
   try {
-    const result = await cloudinit.buildIso({ userData, hostname: outputName, isoName: outputName });
+    const result = await cloudinit.buildIso({ userData, metaData, networkConfig, isoName: outputName });
     await audit.logAction({ action: 'cloud-init-build', vmName: null, result: 'ok', message: result.filename, actor: username });
     redirectWithFlash(res, '/cloud-init', { notice: `Generated ${result.filename}.` });
   } catch (err) {

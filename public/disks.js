@@ -1,6 +1,6 @@
 'use strict';
 
-// Confirm-before-submit for "Delete" on the host-wide Virtual media page.
+// Confirm-before-submit for "Remove" on the host-wide Virtual media page.
 // Same data-attribute + addEventListener pattern as editVmTabs.js: the path
 // is read back via getAttribute (a plain string, never re-parsed as HTML or
 // JS), so it can't break out of a JS string literal the way an inline
@@ -9,7 +9,7 @@
   document.querySelectorAll('form[data-confirm-delete-medium]').forEach(function (form) {
     form.addEventListener('submit', function (ev) {
       var path = form.getAttribute('data-confirm-delete-medium');
-      if (!window.confirm('Permanently delete this virtual disk file from the host?\n\n' + path + '\n\nThis cannot be undone.')) {
+      if (!window.confirm('Remove this medium from VirtualBox\'s registry? The file itself is left on disk.\n\n' + path)) {
         ev.preventDefault();
       }
     });

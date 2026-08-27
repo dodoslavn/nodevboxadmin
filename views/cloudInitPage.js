@@ -68,6 +68,7 @@ function cloudInitPage({
   templates = [],
   isos = [],
   defaultTemplate = '',
+  defaultMetaData = '',
   username = '',
   error = '',
   notice = '',
@@ -79,7 +80,7 @@ function cloudInitPage({
   const body = `
     <div class="card">
       <h1>Cloud-Init</h1>
-      <p class="muted">Build NoCloud seed ISOs for unattended VM installs. Edit the cloud-config below (use <code>{{HOSTNAME}}</code> as a placeholder - it's filled in per-build from the output name), save it as a reusable template, then generate an ISO from it.</p>
+      <p class="muted">Build NoCloud seed ISOs for unattended VM installs. Edit the cloud-config below (use <code>{{HOSTNAME}}</code> as a placeholder - it's filled in per-build from meta-data's <code>local-hostname</code>), save it as a reusable template, then generate an ISO from it.</p>
       ${errorHtml}
       ${noticeHtml}
 
@@ -100,6 +101,16 @@ function cloudInitPage({
           <label>Cloud-config (user-data)</label>
           <textarea name="userData" id="cloud-init-userdata" rows="18">${escapeHtml(defaultTemplate)}</textarea>
           <span class="field-help">Standard #cloud-config YAML - same format as any cloud-init NoCloud seed.</span>
+        </div>
+        <div class="field">
+          <label>Meta-data (JSON)</label>
+          <textarea name="metaData" id="cloud-init-metadata" rows="4">${escapeHtml(defaultMetaData)}</textarea>
+          <span class="field-help"><code>instance-id</code> is always regenerated on build regardless of what's here, so cloud-init reliably re-runs on the new ISO. Set <code>local-hostname</code> here - it's the single source of truth for hostname, also used to fill <code>{{HOSTNAME}}</code> above.</span>
+        </div>
+        <div class="field">
+          <label>Network-config (optional)</label>
+          <textarea name="networkConfig" id="cloud-init-networkconfig" rows="4" placeholder="version: 2&#10;ethernets:&#10;  enp0s3:&#10;    dhcp4: true"></textarea>
+          <span class="field-help">Standard cloud-init network-config YAML. Leave blank to omit - cloud-init falls back to its own default (typically DHCP on all interfaces).</span>
         </div>
         <div class="actions">
           <button type="submit" formaction="/cloud-init/templates/save">Save template</button>
