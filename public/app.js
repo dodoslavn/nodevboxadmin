@@ -5,8 +5,8 @@
 
 (function () {
   var POLL_INTERVAL_MS = 5000;
-  var table = document.getElementById('vm-table');
-  if (!table) return;
+  var tables = document.querySelectorAll('table.vm-table');
+  if (!tables.length) return;
   var pollStatus = document.querySelector('[data-role="poll-status"]');
 
   function badgeClass(state) {
@@ -19,7 +19,7 @@
     var byUuid = {};
     vms.forEach(function (vm) { byUuid[vm.uuid] = vm; });
 
-    var rows = table.querySelectorAll('tr[data-vm-uuid]');
+    var rows = document.querySelectorAll('table.vm-table tr[data-vm-uuid]');
     rows.forEach(function (row) {
       var vm = byUuid[row.getAttribute('data-vm-uuid')];
       if (!vm) return;
@@ -122,8 +122,8 @@
       });
   }
 
-  table.addEventListener('click', function (ev) {
-    var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('table.vm-table button[data-action]') : null;
     if (!btn || btn.disabled) return;
     var row = btn.closest('tr[data-vm-uuid]');
     if (row) doAction(row, btn.getAttribute('data-action'));

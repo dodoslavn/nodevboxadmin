@@ -39,7 +39,8 @@ function actionButtons(status) {
   return `
     <div class="actions" data-role="actions">
       <button type="button" class="btn-sm" data-action="start" ${startDisabled}>Start</button>
-      <button type="button" class="btn-sm btn-warn" data-action="stop" ${stopDisabled}>Stop</button>
+      <button type="button" class="btn-sm btn-warn" data-action="stop" data-mode="acpi" ${stopDisabled}>Stop</button>
+      <button type="button" class="btn-sm danger" data-action="stop" data-mode="hard" ${stopDisabled}>Force Stop</button>
     </div>`;
 }
 
@@ -100,12 +101,12 @@ function vmDetailPage({ vm, status, info = null, history = [], username = '', er
       </div>
     </div>
 
+    ${screenshotBlock(vm, status)}
+
     <div class="card">
       <h2>Settings</h2>
       ${allSettingsTable(info)}
     </div>
-
-    ${screenshotBlock(vm, status)}
 
     <div class="card">
       <h2>Recent activity</h2>

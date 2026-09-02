@@ -17,8 +17,13 @@
   }
 
   // --- Start/Stop (mirrors dashboard behavior) ---
-  function doAction(action) {
-    if (action === 'stop' && !window.confirm('Send ACPI shutdown to this VM?')) return;
+  function doAction(action, mode) {
+    if (action === 'stop') {
+      var confirmMsg = mode === 'hard'
+        ? 'Force stop (power off) this VM? Unsaved data in the guest will be lost.'
+        : 'Send ACPI shutdown to this VM?';
+      if (!window.confirm(confirmMsg)) return;
+    }
 
     var buttons = card.querySelectorAll('button[data-action]');
     buttons.forEach(function (b) { b.disabled = true; });
@@ -28,7 +33,7 @@
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
       credentials: 'same-origin',
-      body: action === 'stop' ? 'mode=acpi' : '',
+      body: action === 'stop' ? 'mode=' + (mode || 'acpi') : '',
     })
       .then(function (res) {
         if (res.status === 401) { window.location = '/login'; throw new Error('unauthorized'); }
@@ -55,7 +60,7 @@
   card.addEventListener('click', function (ev) {
     var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
     if (!btn || btn.disabled) return;
-    doAction(btn.getAttribute('data-action'));
+    doAction(btn.getAttribute('data-action'), btn.getAttribute('data-mode'));
   });
 
   // --- Screenshot refresh (only if the image is present, i.e. VM running) ---

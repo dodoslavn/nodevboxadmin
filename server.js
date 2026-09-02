@@ -175,8 +175,14 @@ router.post('/logout', (req, res) => {
 
 router.get('/dashboard', async (req, res) => {
   if (!auth.requireAuth(req, res)) return;
-  const [{ vms, error }, username] = await Promise.all([vmstatus.getAll(), auth.currentUsername()]);
-  html(res, dashboardPage({ vms, username, vboxError: error }));
+  const [{ vms, error }, marked, username] = await Promise.all([
+    vmstatus.getAll(),
+    vmtemplates.listMarked().catch(() => []),
+    auth.currentUsername(),
+  ]);
+  const markedUuids = new Set(marked.map((t) => t.uuid.toLowerCase()));
+  const vmsWithTemplateFlag = vms.map((vm) => ({ ...vm, isTemplate: markedUuids.has(vm.uuid.toLowerCase()) }));
+  html(res, dashboardPage({ vms: vmsWithTemplateFlag, username, vboxError: error }));
 });
 
 // JSON status endpoint polled by public/app.js. Never cached.

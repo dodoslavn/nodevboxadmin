@@ -26,22 +26,25 @@ function actionButtons(vm) {
     </div>`;
 }
 
+function vmRows(vms, emptyMessage) {
+  if (!vms.length) return `<tr><td colspan="4"><em>${escapeHtml(emptyMessage)}</em></td></tr>`;
+  return vms
+    .map(
+      (vm) => `
+    <tr data-vm-uuid="${escapeHtml(vm.uuid)}">
+      <td><a href="/vms/${encodeURIComponent(vm.uuid)}">${escapeHtml(vm.name)}</a></td>
+      <td>${stateBadge(vm.state)}</td>
+      <td>${actionButtons(vm)}</td>
+      <td><code>${escapeHtml(vm.uuid)}</code></td>
+    </tr>`
+    )
+    .join('');
+}
+
 function dashboardPage({ vms = [], username = '', vboxError = '' } = {}) {
   const errorHtml = vboxError ? `<p class="error">${escapeHtml(vboxError)}</p>` : '';
-
-  const rows = vms.length
-    ? vms
-        .map(
-          (vm) => `
-        <tr data-vm-uuid="${escapeHtml(vm.uuid)}">
-          <td><a href="/vms/${encodeURIComponent(vm.uuid)}">${escapeHtml(vm.name)}</a></td>
-          <td>${stateBadge(vm.state)}</td>
-          <td>${actionButtons(vm)}</td>
-          <td><code>${escapeHtml(vm.uuid)}</code></td>
-        </tr>`
-        )
-        .join('')
-    : '<tr><td colspan="4"><em>No virtual machines yet. Click "Create VM" to make one.</em></td></tr>';
+  const regularVms = vms.filter((vm) => !vm.isTemplate);
+  const templateVms = vms.filter((vm) => vm.isTemplate);
 
   const body = `
     <div class="card">
@@ -51,11 +54,22 @@ function dashboardPage({ vms = [], username = '', vboxError = '' } = {}) {
       </div>
       ${errorHtml}
       <p class="muted" data-role="poll-status">Live status &mdash; updates automatically.</p>
-      <table id="vm-table">
+      <table class="vm-table">
         <thead>
           <tr><th>Name</th><th>Status</th><th>Actions</th><th>VirtualBox UUID</th></tr>
         </thead>
-        <tbody>${rows}</tbody>
+        <tbody>${vmRows(regularVms, 'No virtual machines yet. Click "Create VM" to make one.')}</tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Templates</h2>
+      <p class="muted">VMs marked as clone sources on the <a href="/vms/new">Create VM</a> page.</p>
+      <table class="vm-table">
+        <thead>
+          <tr><th>Name</th><th>Status</th><th>Actions</th><th>VirtualBox UUID</th></tr>
+        </thead>
+        <tbody>${vmRows(templateVms, 'No VMs marked as templates yet.')}</tbody>
       </table>
     </div>
     <script src="/public/app.js" defer></script>`;
