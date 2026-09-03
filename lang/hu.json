@@ -133,7 +133,7 @@
   "cloudInit.cloudConfig": "Cloud-config (user-data)",
   "cloudInit.cloudConfigHelp": "Szabványos #cloud-config YAML - ugyanaz a formátum, mint bármely cloud-init NoCloud seed esetén.",
   "cloudInit.metaData": "Metaadatok (JSON)",
-  "cloudInit.metaDataHelp": "A(z) {instanceIdCode} minden build alkalmával újragenerálódik, függetlenül attól, mi szerepel itt, hogy a cloud-init megbízhatóan újra lefusson az új ISO-n. Itt állítsa be a {localHostnameCode} értéket - ez az egyetlen hiteles forrás a hosztnévhez, és ez tölti ki a fenti {hostnameCode} helyet is.",
+  "cloudInit.metaDataHelp": "A(z) {instanceIdCode} mezőt nem kell saját kezűleg megadnia - az alkalmazás minden build alkalmával mindig újat generál, még akkor is, ha a fenti alapértelmezett sablonban nem szerepel, hogy a cloud-init megbízhatóan újra lefusson az új ISO-n. Itt állítsa be a {localHostnameCode} értéket - ez az egyetlen hiteles forrás a hosztnévhez, és ez tölti ki a fenti {hostnameCode} helyet is.",
   "cloudInit.networkConfig": "Hálózati konfiguráció (opcionális)",
   "cloudInit.networkConfigHelp": "Szabványos cloud-init network-config YAML. Hagyja üresen, ha ki szeretné hagyni - ekkor a cloud-init a saját alapértelmezését használja (jellemzően DHCP-t minden interfészen).",
   "cloudInit.saveTemplateBtn": "Sablon mentése",

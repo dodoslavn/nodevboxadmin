@@ -133,7 +133,7 @@
   "cloudInit.cloudConfig": "Cloud-config (user-data)",
   "cloudInit.cloudConfigHelp": "Standardní YAML #cloud-config - stejný formát jako u jakéhokoli startovacího souboru NoCloud pro cloud-init.",
   "cloudInit.metaData": "Metadata (JSON)",
-  "cloudInit.metaDataHelp": "{instanceIdCode} se při každém sestavení vždy znovu vygeneruje bez ohledu na to, co je zde uvedeno, aby se cloud-init na nové ISO spolehlivě spustil znovu. Nastavte zde {localHostnameCode} - je to jediný zdroj pravdy pro název hostitele, který se použije i k doplnění {hostnameCode} výše.",
+  "cloudInit.metaDataHelp": "{instanceIdCode} nemusíte přidávat sami - aplikace jej při každém sestavení vždy vygeneruje znovu, i když ve výchozí šabloně výše chybí, aby se cloud-init na novém ISO spolehlivě spustil znovu. Nastavte zde {localHostnameCode} - je to jediný zdroj pravdy pro název hostitele, který se použije i k doplnění {hostnameCode} výše.",
   "cloudInit.networkConfig": "Konfigurace sítě (volitelné)",
   "cloudInit.networkConfigHelp": "Standardní YAML network-config pro cloud-init. Ponechte prázdné, pokud jej chcete vynechat - cloud-init pak použije svou vlastní výchozí hodnotu (obvykle DHCP na všech rozhraních).",
   "cloudInit.saveTemplateBtn": "Uložit šablonu",

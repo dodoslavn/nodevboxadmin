@@ -133,7 +133,7 @@
   "cloudInit.cloudConfig": "Cloud-Config (user-data)",
   "cloudInit.cloudConfigHelp": "Standard-#cloud-config-YAML - dasselbe Format wie bei jedem cloud-init-NoCloud-Seed.",
   "cloudInit.metaData": "Meta-Daten (JSON)",
-  "cloudInit.metaDataHelp": "{instanceIdCode} wird bei jedem Build immer neu erzeugt, unabhängig davon, was hier steht, damit cloud-init auf der neuen ISO zuverlässig erneut ausgeführt wird. Legen Sie {localHostnameCode} hier fest - es ist die einzige verbindliche Quelle für den Hostnamen und füllt auch {hostnameCode} oben aus.",
+  "cloudInit.metaDataHelp": "{instanceIdCode} müssen Sie nicht selbst hinzufügen - die App erzeugt bei jedem Build immer eine neue, auch wenn es in der Vorlage oben fehlt, damit cloud-init auf der neuen ISO zuverlässig erneut ausgeführt wird. Legen Sie {localHostnameCode} hier fest - es ist die einzige verbindliche Quelle für den Hostnamen und füllt auch {hostnameCode} oben aus.",
   "cloudInit.networkConfig": "Netzwerkkonfiguration (optional)",
   "cloudInit.networkConfigHelp": "Standard-cloud-init-network-config-YAML. Leer lassen, um es wegzulassen - cloud-init verwendet dann seinen eigenen Standard (üblicherweise DHCP auf allen Schnittstellen).",
   "cloudInit.saveTemplateBtn": "Vorlage speichern",

@@ -133,7 +133,7 @@
   "cloudInit.cloudConfig": "Cloud-config (user-data)",
   "cloudInit.cloudConfigHelp": "Стандартний YAML #cloud-config - той самий формат, що й у будь-якому початковому файлі NoCloud для cloud-init.",
   "cloudInit.metaData": "Метадані (JSON)",
-  "cloudInit.metaDataHelp": "{instanceIdCode} завжди генерується заново під час кожної збірки незалежно від того, що тут вказано, щоб cloud-init надійно запускався повторно на новому ISO. Встановіть тут {localHostnameCode} - це єдине достовірне джерело імені хоста, яке також використовується для заповнення {hostnameCode} вище.",
+  "cloudInit.metaDataHelp": "Додавати {instanceIdCode} самостійно не потрібно - застосунок завжди генерує новий під час кожної збірки, навіть якщо його немає в шаблоні за замовчуванням вище, щоб cloud-init надійно запускався повторно на новому ISO. Встановіть тут {localHostnameCode} - це єдине достовірне джерело імені хоста, яке також використовується для заповнення {hostnameCode} вище.",
   "cloudInit.networkConfig": "Налаштування мережі (необов'язково)",
   "cloudInit.networkConfigHelp": "Стандартний YAML network-config для cloud-init. Залиште порожнім, щоб пропустити - тоді cloud-init використає власне значення за замовчуванням (зазвичай DHCP на всіх інтерфейсах).",
   "cloudInit.saveTemplateBtn": "Зберегти шаблон",
