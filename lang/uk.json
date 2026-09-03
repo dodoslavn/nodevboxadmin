@@ -1,0 +1,16 @@
+{
+  "lang.name": "Українська",
+  "nav.dashboard": "Панель керування",
+  "nav.createVm": "Створити ВМ",
+  "nav.disks": "Диски",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Мережі",
+  "nav.host": "Хост",
+  "nav.logout": "Вийти",
+  "footer.onGithub": "на GitHub",
+  "login.title": "Вхід",
+  "login.username": "Ім'я користувача",
+  "login.password": "Пароль",
+  "login.submit": "Увійти",
+  "login.error.invalid": "Неправильне ім'я користувача або пароль."
+}

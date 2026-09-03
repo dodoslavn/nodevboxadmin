@@ -41,7 +41,7 @@ function moduleRows(modules, checkable) {
     .join('');
 }
 
-function hostPage({ info, username = '' }) {
+function hostPage({ info, username = '', lang = 'en' }) {
   const {
     now, timezone, uptimeSeconds, hostname, runningAs, platform, kernelRelease, arch,
     osPrettyName, vboxVersion, modules, modulesCheckable, requiredMissing,
@@ -82,7 +82,7 @@ function hostPage({ info, username = '' }) {
       </table>
     </div>`;
 
-  return layout({ title: 'Host status', body, showNav: true, username });
+  return layout({ title: 'Host status', body, showNav: true, username, lang });
 }
 
 module.exports = { hostPage };

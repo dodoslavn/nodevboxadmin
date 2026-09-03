@@ -80,7 +80,7 @@ function historyTable(history) {
     </table>`;
 }
 
-function vmDetailPage({ vm, status, info = null, history = [], username = '', error = '' } = {}) {
+function vmDetailPage({ vm, status, info = null, history = [], username = '', error = '', lang = 'en' } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
 
   const body = `
@@ -115,7 +115,7 @@ function vmDetailPage({ vm, status, info = null, history = [], username = '', er
 
     <script src="/public/detail.js" defer></script>`;
 
-  return layout({ title: `${vm.displayName}`, body, showNav: true, username });
+  return layout({ title: `${vm.displayName}`, body, showNav: true, username, lang });
 }
 
 module.exports = { vmDetailPage };

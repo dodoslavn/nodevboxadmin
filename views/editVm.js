@@ -444,7 +444,7 @@ function sharedFoldersSection(vm, folders) {
 }
 
 // `vm` = full parsed settings (see server route). Fields default to '' if unknown.
-function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, natRules = {} } = {}) {
+function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, natRules = {}, lang = 'en' } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
 
@@ -649,7 +649,7 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
     </div>
 
     <script src="/public/editVmTabs.js" defer></script>`;
-  return layout({ title: `Edit ${vm.name}`, body, showNav: true, username });
+  return layout({ title: `Edit ${vm.name}`, body, showNav: true, username, lang });
 }
 
 module.exports = {

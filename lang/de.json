@@ -1,0 +1,16 @@
+{
+  "lang.name": "Deutsch",
+  "nav.dashboard": "Übersicht",
+  "nav.createVm": "VM erstellen",
+  "nav.disks": "Datenträger",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Netzwerke",
+  "nav.host": "Host",
+  "nav.logout": "Abmelden",
+  "footer.onGithub": "auf GitHub",
+  "login.title": "Anmelden",
+  "login.username": "Benutzername",
+  "login.password": "Passwort",
+  "login.submit": "Anmelden",
+  "login.error.invalid": "Ungültiger Benutzername oder ungültiges Passwort."
+}

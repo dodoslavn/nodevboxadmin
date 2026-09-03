@@ -141,7 +141,7 @@ function registerDiskCard() {
 
 function disksPage({
   media = [], isoLibrary = [], diskLibrary = [], isoLibraryDir = '', diskLibraryDir = '',
-  diskFormats = [], username = '', error = '', notice = '',
+  diskFormats = [], username = '', error = '', notice = '', lang = 'en',
 } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -183,7 +183,7 @@ function disksPage({
 
     <script src="/public/disks.js" defer></script>`;
 
-  return layout({ title: 'Virtual media', body, showNav: true, username });
+  return layout({ title: 'Virtual media', body, showNav: true, username, lang });
 }
 
 module.exports = { disksPage };

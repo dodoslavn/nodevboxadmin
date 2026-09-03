@@ -41,7 +41,7 @@ function vmRows(vms, emptyMessage) {
     .join('');
 }
 
-function dashboardPage({ vms = [], username = '', vboxError = '' } = {}) {
+function dashboardPage({ vms = [], username = '', vboxError = '', lang = 'en' } = {}) {
   const errorHtml = vboxError ? `<p class="error">${escapeHtml(vboxError)}</p>` : '';
   const regularVms = vms.filter((vm) => !vm.isTemplate);
   const templateVms = vms.filter((vm) => vm.isTemplate);
@@ -74,7 +74,7 @@ function dashboardPage({ vms = [], username = '', vboxError = '' } = {}) {
     </div>
     <script src="/public/app.js" defer></script>`;
 
-  return layout({ title: 'Dashboard', body, showNav: true, username });
+  return layout({ title: 'Dashboard', body, showNav: true, username, lang });
 }
 
 module.exports = { dashboardPage };

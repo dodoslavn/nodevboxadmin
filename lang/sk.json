@@ -1,0 +1,16 @@
+{
+  "lang.name": "Slovenčina",
+  "nav.dashboard": "Prehľad",
+  "nav.createVm": "Vytvoriť VM",
+  "nav.disks": "Disky",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Siete",
+  "nav.host": "Hostiteľ",
+  "nav.logout": "Odhlásiť",
+  "footer.onGithub": "na GitHube",
+  "login.title": "Prihlásenie",
+  "login.username": "Používateľské meno",
+  "login.password": "Heslo",
+  "login.submit": "Prihlásiť sa",
+  "login.error.invalid": "Neplatné používateľské meno alebo heslo."
+}

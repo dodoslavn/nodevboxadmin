@@ -1,0 +1,16 @@
+{
+  "lang.name": "Čeština",
+  "nav.dashboard": "Přehled",
+  "nav.createVm": "Vytvořit VM",
+  "nav.disks": "Disky",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Sítě",
+  "nav.host": "Hostitel",
+  "nav.logout": "Odhlásit",
+  "footer.onGithub": "na GitHubu",
+  "login.title": "Přihlášení",
+  "login.username": "Uživatelské jméno",
+  "login.password": "Heslo",
+  "login.submit": "Přihlásit se",
+  "login.error.invalid": "Neplatné uživatelské jméno nebo heslo."
+}

@@ -1,0 +1,16 @@
+{
+  "lang.name": "Magyar",
+  "nav.dashboard": "Áttekintés",
+  "nav.createVm": "VM létrehozása",
+  "nav.disks": "Lemezek",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Hálózatok",
+  "nav.host": "Hoszt",
+  "nav.logout": "Kijelentkezés",
+  "footer.onGithub": "a GitHubon",
+  "login.title": "Bejelentkezés",
+  "login.username": "Felhasználónév",
+  "login.password": "Jelszó",
+  "login.submit": "Bejelentkezés",
+  "login.error.invalid": "Érvénytelen felhasználónév vagy jelszó."
+}

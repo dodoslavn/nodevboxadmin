@@ -1,0 +1,16 @@
+{
+  "lang.name": "English",
+  "nav.dashboard": "Dashboard",
+  "nav.createVm": "Create VM",
+  "nav.disks": "Disks",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Networks",
+  "nav.host": "Host",
+  "nav.logout": "Logout",
+  "footer.onGithub": "on GitHub",
+  "login.title": "Sign in",
+  "login.username": "Username",
+  "login.password": "Password",
+  "login.submit": "Sign in",
+  "login.error.invalid": "Invalid username or password."
+}

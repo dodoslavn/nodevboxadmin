@@ -82,6 +82,7 @@ function createVmPage({
   templates = [],
   allVms = [],
   markedTemplates = [],
+  lang = 'en',
 } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -103,7 +104,7 @@ function createVmPage({
 
     ${createFromTemplateCard(templates)}
     ${manageTemplatesCard(allVms, markedTemplates)}`;
-  return layout({ title: 'Create VM', body, showNav: true, username });
+  return layout({ title: 'Create VM', body, showNav: true, username, lang });
 }
 
 module.exports = { createVmPage };

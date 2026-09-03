@@ -1,6 +1,6 @@
 {
   "name": "nodevboxadmin",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "description": "Website for managing VirtualBox VMs on a single Debian host. No npm dependencies by design - see ARCHITECTURE.md.",
   "main": "server.js",

@@ -72,6 +72,7 @@ function cloudInitPage({
   username = '',
   error = '',
   notice = '',
+  lang = 'en',
 } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -93,9 +94,9 @@ function cloudInitPage({
           </select>
         </div>
         <input type="hidden" name="id" id="cloud-init-template-id" value="">
-        <div class="grid">
-          <div class="field"><label>Template name</label><input type="text" name="name" id="cloud-init-template-name" maxlength="64" placeholder="e.g. debian-generic"></div>
-          <div class="field"><label>Output name</label><input type="text" name="outputName" maxlength="64" placeholder="e.g. web01" required></div>
+        <div class="field">
+          <label>Template name</label>
+          <input type="text" name="name" id="cloud-init-template-name" maxlength="64" placeholder="e.g. debian-generic">
         </div>
         <div class="field">
           <label>Cloud-config (user-data)</label>
@@ -112,9 +113,16 @@ function cloudInitPage({
           <textarea name="networkConfig" id="cloud-init-networkconfig" rows="4" placeholder="version: 2&#10;ethernets:&#10;  enp0s3:&#10;    dhcp4: true"></textarea>
           <span class="field-help">Standard cloud-init network-config YAML. Leave blank to omit - cloud-init falls back to its own default (typically DHCP on all interfaces).</span>
         </div>
-        <div class="actions">
-          <button type="submit" formaction="/cloud-init/templates/save">Save template</button>
-          <button type="submit" formaction="/cloud-init/build">Generate ISO</button>
+        <div class="actions" style="justify-content:flex-end">
+          <button type="submit" formaction="/cloud-init/templates/save" formnovalidate>Save template</button>
+        </div>
+        <div class="field">
+          <label>ISO name</label>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" name="outputName" maxlength="64" placeholder="e.g. web01" required style="flex:1">
+            <button type="submit" formaction="/cloud-init/build" style="margin-top:0">Generate ISO</button>
+          </div>
+          <span class="field-help">Builds the seed ISO from everything above, written as <code>&lt;ISO name&gt;.iso</code>.</span>
         </div>
       </form>
 
@@ -131,7 +139,7 @@ function cloudInitPage({
 
     <script src="/public/cloudinit.js" defer></script>`;
 
-  return layout({ title: 'Cloud-Init', body, showNav: true, username });
+  return layout({ title: 'Cloud-Init', body, showNav: true, username, lang });
 }
 
 module.exports = { cloudInitPage };

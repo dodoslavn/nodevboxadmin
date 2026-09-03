@@ -20,6 +20,7 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const AUDIT_LOG_FILE = path.join(DATA_DIR, 'audit.log');
 const { Router } = require('./lib/router');
 const auth = require('./lib/auth');
+const i18n = require('./lib/i18n');
 const vmstatus = require('./lib/vmstatus');
 const vbox = require('./lib/vbox');
 const cloudinit = require('./lib/cloudinit');
@@ -144,7 +145,7 @@ router.get('/login', (req, res) => {
     redirect(res, '/dashboard');
     return;
   }
-  html(res, loginPage());
+  html(res, loginPage({ lang: req.lang }));
 });
 
 router.post('/login', async (req, res) => {
@@ -155,7 +156,7 @@ router.post('/login', async (req, res) => {
 
   const ok = await auth.verifyLogin(username, password);
   if (!ok) {
-    html(res, loginPage({ error: 'Invalid username or password.', username }), 401);
+    html(res, loginPage({ error: i18n.t(req.lang, 'login.error.invalid'), username, lang: req.lang }), 401);
     return;
   }
 
@@ -182,7 +183,7 @@ router.get('/dashboard', async (req, res) => {
   ]);
   const markedUuids = new Set(marked.map((t) => t.uuid.toLowerCase()));
   const vmsWithTemplateFlag = vms.map((vm) => ({ ...vm, isTemplate: markedUuids.has(vm.uuid.toLowerCase()) }));
-  html(res, dashboardPage({ vms: vmsWithTemplateFlag, username, vboxError: error }));
+  html(res, dashboardPage({ vms: vmsWithTemplateFlag, username, vboxError: error, lang: req.lang }));
 });
 
 // JSON status endpoint polled by public/app.js. Never cached.
@@ -197,7 +198,7 @@ router.get('/api/vms/status', async (req, res) => {
 router.get('/host', async (req, res) => {
   if (!auth.requireAuth(req, res)) return;
   const [info, username] = await Promise.all([hostinfo.getHostInfo(), auth.currentUsername()]);
-  html(res, hostPage({ info, username }));
+  html(res, hostPage({ info, username, lang: req.lang }));
 });
 
 // --- Virtual media (host-wide - every registered disk/ISO/floppy, not
@@ -230,7 +231,7 @@ router.get('/disks', async (req, res) => {
     media, isoLibrary, diskLibrary,
     isoLibraryDir: medialibrary.ISO_LIBRARY_DIR,
     diskLibraryDir: medialibrary.DISK_LIBRARY_DIR,
-    diskFormats: vbox.DISK_FORMATS, username, error, notice: query.get('notice') || '',
+    diskFormats: vbox.DISK_FORMATS, username, error, notice: query.get('notice') || '', lang: req.lang,
   }));
 });
 
@@ -381,6 +382,7 @@ router.get('/cloud-init', async (req, res) => {
       username,
       error,
       notice: query.get('notice') || '',
+      lang: req.lang,
     })
   );
 });
@@ -486,7 +488,7 @@ router.get('/networks', async (req, res) => {
   }
   html(res, networksPage({
     natNetworks, hostOnlyIfs, dhcpByInterface, bridgedIfs, internalNets, networksConf,
-    username, error, notice: query.get('notice') || '',
+    username, error, notice: query.get('notice') || '', lang: req.lang,
   }));
 });
 
@@ -662,7 +664,7 @@ router.get('/vms/new', async (req, res) => {
   } catch (err) {
     error = error || `Could not load templates: ${err.message}`;
   }
-  html(res, createVmPage({ username, error, notice: query.get('notice') || '', ...templateData }));
+  html(res, createVmPage({ username, error, notice: query.get('notice') || '', ...templateData, lang: req.lang }));
 });
 
 router.post('/vms/new', async (req, res) => {
@@ -682,6 +684,7 @@ router.post('/vms/new', async (req, res) => {
         error: 'VM name must be 1-64 chars: letters, digits, space, dot, dash, underscore.',
         form: body,
         ...templateData,
+        lang: req.lang,
       }),
       400
     );
@@ -695,7 +698,7 @@ router.post('/vms/new', async (req, res) => {
   } catch (err) {
     await audit.logAction({ action: 'create', vmName: name, result: 'error', message: err.message, actor: username });
     const templateData = await buildTemplateData().catch(() => ({ templates: [], allVms: [], markedTemplates: [] }));
-    html(res, createVmPage({ username, error: `Could not create VM: ${err.message}`, form: body, ...templateData }), 502);
+    html(res, createVmPage({ username, error: `Could not create VM: ${err.message}`, form: body, ...templateData, lang: req.lang }), 502);
   }
 });
 
@@ -928,7 +931,7 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
     const storage = vbox.parseStorage(info);
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
-      busPortRanges: vbox.BUS_PORT_RANGE, natRules, error: flashError, notice: flashNotice,
+      busPortRanges: vbox.BUS_PORT_RANGE, natRules, error: flashError, notice: flashNotice, lang: req.lang,
     }));
   } catch (err) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -1044,7 +1047,7 @@ router.post('/vms/:uuid/edit', async (req, res, params) => {
       clipboardmode, draganddrop, snapshotfolder, autostartdelay,
       clipboardfiletransfers: clipboardfiletransfers === 'enabled', autostartenabled: autostartenabled === 'on',
     };
-    html(res, editVmPage({ vm, username, error }), 400);
+    html(res, editVmPage({ vm, username, error, lang: req.lang }), 400);
   };
 
   if (!VM_NAME_RE.test(name)) {
@@ -1147,7 +1150,7 @@ router.get('/vms/:uuid', async (req, res, params) => {
 
   html(res, vmDetailPage({
     vm, status, info, history: vmHistory, username, error,
-    storage, storageBuses: vbox.STORAGE_BUSES,
+    storage, storageBuses: vbox.STORAGE_BUSES, lang: req.lang,
   }));
 });
 
@@ -1487,6 +1490,20 @@ function handleRequest(req, res) {
   // Treat HEAD like GET for routing/static (Node strips the body on HEAD
   // responses automatically), so health checks / monitoring HEAD requests work.
   const method = req.method === 'HEAD' ? 'GET' : req.method;
+
+  // ?lang=xx works on any GET path (footer language picker) - set the
+  // cookie and redirect to the same path with that param stripped, same
+  // shape as phpopenvpnadmin's web/includes/lang.php. Runs before routing
+  // so it applies uniformly without every handler needing to know about it.
+  if (method === 'GET') {
+    const langParam = new URL(req.url, 'http://localhost').searchParams.get('lang');
+    if (langParam && i18n.isValidLang(langParam)) {
+      res.writeHead(302, { Location: pathname, 'Set-Cookie': i18n.langCookie(langParam) });
+      res.end();
+      return;
+    }
+  }
+  req.lang = i18n.detectLang(req);
 
   try {
     if (method === 'GET' && tryServeStatic(pathname, res)) return;

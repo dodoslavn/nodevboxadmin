@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('../config/config.json');
+const i18n = require('../lib/i18n');
 
 // Shared HTML shell + minimal CSS. Plain template literals, no engine.
 // All dynamic values passed in here must already be escaped by the caller
@@ -32,6 +33,7 @@ const BASE_CSS = `
   body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     margin: 0; background: #f4f5f7; color: #1a1a1a;
+    min-height: 100vh; display: flex; flex-direction: column;
   }
   header {
     background: #23272e; color: #fff; padding: 0.8rem 1.2rem;
@@ -39,7 +41,32 @@ const BASE_CSS = `
   }
   header a { color: #9ecbff; text-decoration: none; }
   header .brand { font-weight: 600; color: #fff; }
-  main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  main { flex: 1; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  main.login-wrap {
+    max-width: none; margin: 0; padding: 2rem 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-outer { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; width: 100%; max-width: 380px; }
+  .login-header { display: flex; align-items: center; gap: 0.75rem; }
+  .login-app-name { font-size: 26px; font-weight: 700; color: #1a1a1a; }
+  .login-box {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 2rem; width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .login-box h1 { font-size: 16px; color: #6b7280; font-weight: 500; margin: 0; }
+  .login-box form { display: flex; flex-direction: column; gap: 0.75rem; }
+  .login-box form label { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; font-weight: 500; }
+  .login-box form button { width: 100%; margin-top: 0.5rem; }
+  footer {
+    max-width: 900px; margin: 0 auto 2rem; padding: 0 1rem;
+    text-align: center; font-size: 0.85rem; color: #6b7280;
+  }
+  footer a { color: inherit; }
+  .footer-langs { margin-top: 0.4rem; }
+  .footer-langs a { margin: 0 0.15rem; }
+  .footer-langs a:hover { color: #2563eb; }
+  .footer-lang-active { margin: 0 0.15rem; color: #2563eb; font-weight: 600; }
   .card {
     background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
     padding: 1.5rem; margin-bottom: 1rem;
@@ -114,33 +141,70 @@ const BASE_CSS = `
   .tab-panel[hidden] { display: none; }
 `;
 
-function layout({ title, body, showNav = false, username = '' }) {
-  const nav = showNav
-    ? `<header>
+function langSwitcherHtml(lang) {
+  const links = i18n
+    .langList()
+    .map((l) =>
+      l.code === lang
+        ? `<span class="footer-lang-active">${escapeHtml(l.name)}</span>`
+        : `<a href="?lang=${encodeURIComponent(l.code)}">${escapeHtml(l.name)}</a>`
+    )
+    .join(' · ');
+  return `<div class="footer-langs">${links}</div>`;
+}
+
+function layout({ title, body, showNav = false, username = '', loginChrome = false, lang = 'en' }) {
+  // Nav links + logout only render once authenticated. The login page skips
+  // this generic header entirely - it gets its own logo+brand block instead
+  // (see main.login-wrap below), matching the sibling phpopenvpnadmin
+  // project's login layout (vpn.fordo.eu/login.php).
+  const header = loginChrome
+    ? ''
+    : `<header>
          <span class="brand">${escapeHtml(BRAND_NAME)}</span>
-         <nav>
-           <a href="/dashboard">Dashboard</a>
+         ${
+           showNav
+             ? `<nav>
+           <a href="/dashboard">${escapeHtml(i18n.t(lang, 'nav.dashboard'))}</a>
            &nbsp;|&nbsp;
-           <a href="/vms/new">Create VM</a>
+           <a href="/vms/new">${escapeHtml(i18n.t(lang, 'nav.createVm'))}</a>
            &nbsp;|&nbsp;
-           <a href="/disks">Disks</a>
+           <a href="/disks">${escapeHtml(i18n.t(lang, 'nav.disks'))}</a>
            &nbsp;|&nbsp;
-           <a href="/cloud-init">Cloud-Init</a>
+           <a href="/cloud-init">${escapeHtml(i18n.t(lang, 'nav.cloudInit'))}</a>
            &nbsp;|&nbsp;
-           <a href="/networks">Networks</a>
+           <a href="/networks">${escapeHtml(i18n.t(lang, 'nav.networks'))}</a>
            &nbsp;|&nbsp;
-           <a href="/host">Host</a>
+           <a href="/host">${escapeHtml(i18n.t(lang, 'nav.host'))}</a>
            &nbsp;|&nbsp;
            <span>${escapeHtml(username)}</span>
            <form method="POST" action="/logout" style="display:inline">
-             <button type="submit" style="background:none;color:#9ecbff;padding:0;margin:0;font-size:1rem">Logout</button>
+             <button type="submit" style="background:none;color:#9ecbff;padding:0;margin:0;font-size:1rem">${escapeHtml(i18n.t(lang, 'nav.logout'))}</button>
            </form>
-         </nav>
-       </header>`
-    : '';
+         </nav>`
+             : ''
+         }
+       </header>`;
+
+  const main = loginChrome
+    ? `<main class="login-wrap">
+         <div class="login-outer">
+           <div class="login-header">
+             <img src="/public/favicon.svg" alt="logo" height="48">
+             <div class="login-app-name">${escapeHtml(BRAND_NAME)}</div>
+           </div>
+           ${body}
+         </div>
+       </main>`
+    : `<main>${body}</main>`;
+
+  const footer = `<footer>
+    <a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(PRODUCT_NAME)}</a> ${escapeHtml(i18n.t(lang, 'footer.onGithub'))}
+    ${langSwitcherHtml(lang)}
+  </footer>`;
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(lang)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -149,8 +213,9 @@ function layout({ title, body, showNav = false, username = '' }) {
   <style>${BASE_CSS}</style>
 </head>
 <body>
-  ${nav}
-  <main>${body}</main>
+  ${header}
+  ${main}
+  ${footer}
 </body>
 </html>`;
 }

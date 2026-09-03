@@ -1,0 +1,16 @@
+{
+  "lang.name": "Español",
+  "nav.dashboard": "Panel",
+  "nav.createVm": "Crear VM",
+  "nav.disks": "Discos",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Redes",
+  "nav.host": "Host",
+  "nav.logout": "Cerrar sesión",
+  "footer.onGithub": "en GitHub",
+  "login.title": "Iniciar sesión",
+  "login.username": "Usuario",
+  "login.password": "Contraseña",
+  "login.submit": "Iniciar sesión",
+  "login.error.invalid": "Usuario o contraseña incorrectos."
+}

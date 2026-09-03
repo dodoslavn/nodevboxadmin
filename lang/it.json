@@ -1,0 +1,16 @@
+{
+  "lang.name": "Italiano",
+  "nav.dashboard": "Riepilogo",
+  "nav.createVm": "Crea VM",
+  "nav.disks": "Dischi",
+  "nav.cloudInit": "Cloud-Init",
+  "nav.networks": "Reti",
+  "nav.host": "Host",
+  "nav.logout": "Esci",
+  "footer.onGithub": "su GitHub",
+  "login.title": "Accedi",
+  "login.username": "Nome utente",
+  "login.password": "Password",
+  "login.submit": "Accedi",
+  "login.error.invalid": "Nome utente o password non validi."
+}

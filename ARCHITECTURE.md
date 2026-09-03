@@ -193,6 +193,17 @@ nodevboxadmin/
   - `logAction({action, vmId, result}) -> Promise<void>` (appends one JSON
     line to `data/audit.log`)
   - `readRecent(vmId, limit) -> Promise<Array>` (tails the log file, filtered)
+- **`lib/i18n.js`** — minimal i18n (no library): cookie → `Accept-Language` →
+  `en` detection (`detectLang(req)`), JSON string tables under `lang/*.json`
+  (one file per locale: cs, de, en, es, hu, it, pl, sk, uk - same set as the
+  sibling phpopenvpnadmin project's footer language picker), `t(lang, key,
+  vars?)` with `{var}` substitution and fallback to the English string for
+  any key a locale doesn't have. `?lang=xx` is handled centrally in
+  `server.js`'s `handleRequest` (sets the `lang` cookie, redirects, works on
+  any GET path) rather than per-route, so every page picks it up uniformly.
+  Scope so far: shared chrome only - nav labels, footer, and the login page
+  (`views/layout.js`, `views/login.js`); page bodies (dashboard, disks,
+  etc.) are still English-only pending a follow-up translation pass.
 - **`config/password-reset.js`** — run manually once at deploy time (`node
   config/password-reset.js`), prompts for username/password on stdin, writes
   `data/config.json` with a fresh scrypt hash + salt. Not exposed over HTTP.

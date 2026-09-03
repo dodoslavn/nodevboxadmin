@@ -140,7 +140,7 @@ function networksConfHtml(networksConf) {
 
 function networksPage({
   natNetworks = [], hostOnlyIfs = [], dhcpByInterface = {}, bridgedIfs = [], internalNets = [], networksConf = null,
-  username = '', error = '', notice = '',
+  username = '', error = '', notice = '', lang = 'en',
 } = {}) {
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -204,7 +204,7 @@ function networksPage({
 
     <script src="/public/networks.js" defer></script>`;
 
-  return layout({ title: 'Networks', body, showNav: true, username });
+  return layout({ title: 'Networks', body, showNav: true, username, lang });
 }
 
 module.exports = { networksPage };
