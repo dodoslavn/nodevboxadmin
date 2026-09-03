@@ -394,9 +394,11 @@ router.post('/cloud-init/templates/save', async (req, res) => {
   const id = (body.id || '').trim() || undefined;
   const name = (body.name || '').trim();
   const userData = body.userData || '';
+  const metaData = body.metaData || '';
+  const networkConfig = body.networkConfig || '';
 
   try {
-    const record = await cloudinit.saveTemplate({ id, name, userData });
+    const record = await cloudinit.saveTemplate({ id, name, userData, metaData, networkConfig });
     await audit.logAction({ action: 'cloud-init-template-save', vmName: null, result: 'ok', message: record.name, actor: username });
     redirectWithFlash(res, '/cloud-init', { notice: `Saved template "${record.name}".` });
   } catch (err) {

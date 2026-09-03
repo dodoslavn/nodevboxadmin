@@ -13,6 +13,8 @@
   var idField = document.getElementById('cloud-init-template-id');
   var nameField = document.getElementById('cloud-init-template-name');
   var textarea = document.getElementById('cloud-init-userdata');
+  var metaDataField = document.getElementById('cloud-init-metadata');
+  var networkConfigField = document.getElementById('cloud-init-networkconfig');
 
   var templates = [];
   try {
@@ -39,6 +41,8 @@
     idField.value = match.id;
     nameField.value = match.name;
     textarea.value = match.userData;
+    metaDataField.value = match.metaData || '';
+    networkConfigField.value = match.networkConfig || '';
   });
 })();
 

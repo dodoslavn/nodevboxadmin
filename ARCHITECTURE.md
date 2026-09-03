@@ -150,9 +150,11 @@ nodevboxadmin/
   - `writeJson(path, data) -> Promise<void>` (queued per-file to serialize
     concurrent writes)
 - **`lib/cloudinit.js`** — NoCloud cloud-init seed ISO builder
-  - `listTemplates()` / `saveTemplate({id, name, userData})` (upsert) /
-    `deleteTemplate(id)` — saved cloud-config templates, via `lib/store.js`
-    against `data/cloud-init-templates.json`
+  - `listTemplates()` / `saveTemplate({id, name, userData, metaData,
+    networkConfig})` (upsert) / `deleteTemplate(id)` — saved templates, via
+    `lib/store.js` against `data/cloud-init-templates.json`. All three build
+    inputs are saved together so loading a template restores the exact
+    combination that produced a working ISO, not just the user-data half
   - `buildIso({userData, metaData, networkConfig, isoName}) -> Promise<{ok, path, filename}>`
     — `metaData` is caller-supplied JSON (valid YAML too, which is all
     NoCloud requires); `instance-id` is always overwritten with a fresh
