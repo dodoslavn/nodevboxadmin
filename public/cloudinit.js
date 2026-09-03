@@ -42,14 +42,15 @@
   });
 })();
 
-// Confirm-before-submit for template/ISO delete - same getAttribute pattern
-// as public/disks.js, so the name/filename can't break out of a JS string
-// the way an inline onsubmit built from escaped HTML could.
+// Confirm-before-submit for template/ISO delete - the full, already-
+// translated confirm message is rendered server-side into the data
+// attribute (lib/i18n.js); same getAttribute pattern as public/disks.js, so
+// the name/filename can't break out of a JS string the way an inline
+// onsubmit built from escaped HTML could.
 (function () {
   document.querySelectorAll('form[data-confirm-delete-template]').forEach(function (form) {
     form.addEventListener('submit', function (ev) {
-      var name = form.getAttribute('data-confirm-delete-template');
-      if (!window.confirm('Delete the saved template "' + name + '"?')) {
+      if (!window.confirm(form.getAttribute('data-confirm-delete-template'))) {
         ev.preventDefault();
       }
     });
@@ -59,8 +60,7 @@
 (function () {
   document.querySelectorAll('form[data-confirm-delete-iso]').forEach(function (form) {
     form.addEventListener('submit', function (ev) {
-      var name = form.getAttribute('data-confirm-delete-iso');
-      if (!window.confirm('Delete the generated ISO "' + name + '" from disk?\n\nThis cannot be undone.')) {
+      if (!window.confirm(form.getAttribute('data-confirm-delete-iso'))) {
         ev.preventDefault();
       }
     });

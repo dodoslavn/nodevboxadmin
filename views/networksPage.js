@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout, escapeHtml } = require('./layout');
+const i18n = require('../lib/i18n');
 
 // Host-wide networking page: NAT Networks and host-only interfaces (both
 // full lifecycle - create/remove, matching what this VBoxManage build
@@ -19,8 +20,8 @@ function suggestDhcpDefaults(ip) {
   return { serverIp: `${base}.100`, lowerIp: `${base}.101`, upperIp: `${base}.254` };
 }
 
-function natNetworkRows(nets) {
-  if (!nets.length) return '<tr><td colspan="6"><em>No NAT networks yet.</em></td></tr>';
+function natNetworkRows(nets, tr) {
+  if (!nets.length) return `<tr><td colspan="6"><em>${escapeHtml(tr('networks.noNatNetworks'))}</em></td></tr>`;
   return nets
     .map(
       (n) => `
@@ -28,12 +29,12 @@ function natNetworkRows(nets) {
         <td>${escapeHtml(n.Name || '')}</td>
         <td>${escapeHtml(n.Network || '')}</td>
         <td>${escapeHtml(n.Gateway || '')}</td>
-        <td>${n['DHCP Server'] === 'Yes' ? 'Yes' : 'No'}</td>
-        <td>${n.IPv6 === 'Yes' ? 'Yes' : 'No'}</td>
+        <td>${n['DHCP Server'] === 'Yes' ? tr('common.yes') : tr('common.no')}</td>
+        <td>${n.IPv6 === 'Yes' ? tr('common.yes') : tr('common.no')}</td>
         <td>
           <form method="POST" action="/networks/natnet/${encodeURIComponent(n.Name)}/remove" style="display:inline"
-                data-confirm-remove-network="NAT network &quot;${escapeHtml(n.Name)}&quot;">
-            <button type="submit" class="btn-sm danger">Remove</button>
+                data-confirm-remove-network="${escapeHtml(tr('networks.confirmRemoveNat', { name: n.Name }))}">
+            <button type="submit" class="btn-sm danger">${escapeHtml(tr('common.remove'))}</button>
           </form>
         </td>
       </tr>`
@@ -41,46 +42,46 @@ function natNetworkRows(nets) {
     .join('');
 }
 
-function dhcpControlsHtml(iface, dhcp) {
+function dhcpControlsHtml(iface, dhcp, tr) {
   if (dhcp) {
     return `
       <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/dhcp/remove" style="display:inline"
-            data-confirm-remove-network="the DHCP server on &quot;${escapeHtml(iface.Name)}&quot;">
-        <button type="submit" class="btn-sm btn-warn">Disable DHCP</button>
+            data-confirm-remove-network="${escapeHtml(tr('networks.confirmRemoveDhcp', { name: iface.Name }))}">
+        <button type="submit" class="btn-sm btn-warn">${escapeHtml(tr('networks.disableDhcp'))}</button>
       </form>`;
   }
   const d = suggestDhcpDefaults(iface.IPAddress);
   return `
     <details style="margin-top:0.3rem">
-      <summary class="muted" style="cursor:pointer;font-size:0.85rem">Enable DHCP&hellip;</summary>
+      <summary class="muted" style="cursor:pointer;font-size:0.85rem">${escapeHtml(tr('networks.enableDhcpEllipsis'))}</summary>
       <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/dhcp/enable" style="margin-top:0.5rem;min-width:220px">
-        <div class="field"><label>Server IP</label><input type="text" name="serverIp" value="${escapeHtml(d.serverIp)}" placeholder="192.168.56.100"></div>
-        <div class="field"><label>Netmask</label><input type="text" name="netmask" value="255.255.255.0" placeholder="255.255.255.0"></div>
-        <div class="field"><label>Lower IP</label><input type="text" name="lowerIp" value="${escapeHtml(d.lowerIp)}" placeholder="192.168.56.101"></div>
-        <div class="field"><label>Upper IP</label><input type="text" name="upperIp" value="${escapeHtml(d.upperIp)}" placeholder="192.168.56.254"></div>
-        <button type="submit" class="btn-sm">Enable DHCP</button>
+        <div class="field"><label>${escapeHtml(tr('networks.serverIp'))}</label><input type="text" name="serverIp" value="${escapeHtml(d.serverIp)}" placeholder="192.168.56.100"></div>
+        <div class="field"><label>${escapeHtml(tr('networks.netmask'))}</label><input type="text" name="netmask" value="255.255.255.0" placeholder="255.255.255.0"></div>
+        <div class="field"><label>${escapeHtml(tr('networks.lowerIp'))}</label><input type="text" name="lowerIp" value="${escapeHtml(d.lowerIp)}" placeholder="192.168.56.101"></div>
+        <div class="field"><label>${escapeHtml(tr('networks.upperIp'))}</label><input type="text" name="upperIp" value="${escapeHtml(d.upperIp)}" placeholder="192.168.56.254"></div>
+        <button type="submit" class="btn-sm">${escapeHtml(tr('networks.enableDhcp'))}</button>
       </form>
     </details>`;
 }
 
-function ipConfigFormHtml(iface) {
+function ipConfigFormHtml(iface, tr) {
   return `
     <details style="margin-top:0.3rem">
-      <summary class="muted" style="cursor:pointer;font-size:0.85rem">Change IP&hellip;</summary>
+      <summary class="muted" style="cursor:pointer;font-size:0.85rem">${escapeHtml(tr('networks.changeIpEllipsis'))}</summary>
       <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/ipconfig" style="margin-top:0.5rem;min-width:220px">
-        <div class="field"><label>IP address</label><input type="text" name="ip" value="${escapeHtml(iface.IPAddress || '')}" placeholder="192.168.56.1"></div>
-        <div class="field"><label>Netmask</label><input type="text" name="netmask" value="${escapeHtml(iface.NetworkMask || '')}" placeholder="255.255.255.0"></div>
-        <button type="submit" class="btn-sm">Update IP</button>
+        <div class="field"><label>${escapeHtml(tr('networks.ipAddress'))}</label><input type="text" name="ip" value="${escapeHtml(iface.IPAddress || '')}" placeholder="192.168.56.1"></div>
+        <div class="field"><label>${escapeHtml(tr('networks.netmask'))}</label><input type="text" name="netmask" value="${escapeHtml(iface.NetworkMask || '')}" placeholder="255.255.255.0"></div>
+        <button type="submit" class="btn-sm">${escapeHtml(tr('networks.updateIp'))}</button>
       </form>
       <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/ipconfig/dhcp" style="margin-top:0.5rem">
-        <button type="submit" class="btn-sm">Set to automatic (DHCP client)</button>
-        <span class="field-help">No static IP - this adapter gets its address from a DHCP server already on that network (e.g. one you run yourself, not VirtualBox's).</span>
+        <button type="submit" class="btn-sm">${escapeHtml(tr('networks.setAutomatic'))}</button>
+        <span class="field-help">${escapeHtml(tr('networks.setAutomaticHelp'))}</span>
       </form>
     </details>`;
 }
 
-function hostOnlyRows(ifaces, dhcpByInterface) {
-  if (!ifaces.length) return '<tr><td colspan="5"><em>No host-only interfaces yet.</em></td></tr>';
+function hostOnlyRows(ifaces, dhcpByInterface, tr) {
+  if (!ifaces.length) return `<tr><td colspan="5"><em>${escapeHtml(tr('networks.noHostOnly'))}</em></td></tr>`;
   return ifaces
     .map((iface) => {
       const dhcp = dhcpByInterface[iface.Name];
@@ -89,12 +90,12 @@ function hostOnlyRows(ifaces, dhcpByInterface) {
         <td>${escapeHtml(iface.Name || '')}</td>
         <td>${escapeHtml(iface.IPAddress || '')} / ${escapeHtml(iface.NetworkMask || '')}</td>
         <td>${escapeHtml(iface.Status || '')}</td>
-        <td>${dhcp ? 'Enabled' : 'Disabled'}${dhcpControlsHtml(iface, dhcp)}</td>
+        <td>${dhcp ? escapeHtml(tr('common.enabled')) : escapeHtml(tr('common.disabled'))}${dhcpControlsHtml(iface, dhcp, tr)}</td>
         <td>
-          ${ipConfigFormHtml(iface)}
+          ${ipConfigFormHtml(iface, tr)}
           <form method="POST" action="/networks/hostonly/${encodeURIComponent(iface.Name)}/remove" style="display:inline"
-                data-confirm-remove-network="host-only interface &quot;${escapeHtml(iface.Name)}&quot;">
-            <button type="submit" class="btn-sm danger">Remove</button>
+                data-confirm-remove-network="${escapeHtml(tr('networks.confirmRemoveHostOnly', { name: iface.Name }))}">
+            <button type="submit" class="btn-sm danger">${escapeHtml(tr('common.remove'))}</button>
           </form>
         </td>
       </tr>`;
@@ -102,8 +103,8 @@ function hostOnlyRows(ifaces, dhcpByInterface) {
     .join('');
 }
 
-function bridgedRows(ifaces) {
-  if (!ifaces.length) return '<tr><td colspan="3"><em>No bridgeable interfaces detected.</em></td></tr>';
+function bridgedRows(ifaces, tr) {
+  if (!ifaces.length) return `<tr><td colspan="3"><em>${escapeHtml(tr('networks.noBridgeable'))}</em></td></tr>`;
   return ifaces
     .map(
       (i) => `
@@ -116,25 +117,25 @@ function bridgedRows(ifaces) {
     .join('');
 }
 
-function internalNetRows(names) {
-  if (!names.length) return '<tr><td><em>No internal networks currently in use by any VM.</em></td></tr>';
+function internalNetRows(names, tr) {
+  if (!names.length) return `<tr><td><em>${escapeHtml(tr('networks.noInternal'))}</em></td></tr>`;
   return names.map((n) => `<tr><td>${escapeHtml(n)}</td></tr>`).join('');
 }
 
-function networksConfHtml(networksConf) {
+function networksConfHtml(networksConf, tr) {
   const conf = networksConf || { path: '/etc/vbox/networks.conf', exists: false, lines: [] };
   if (conf.error) {
-    return `<p class="error">Could not read ${escapeHtml(conf.path)}: ${escapeHtml(conf.error)}</p>`;
+    return `<p class="error">${tr('networks.confReadError', { path: escapeHtml(conf.path), error: escapeHtml(conf.error) })}</p>`;
   }
   if (!conf.exists) {
-    return `<p class="muted">No ${escapeHtml(conf.path)} - only VirtualBox's built-in default range is allowed: <code>192.168.56.0/21</code> (and its IPv6 equivalent). An IP outside the allowed range fails with a misleading "permission denied". Create that file (each line: <code>* &lt;CIDR&gt; ...</code>) to allow other subnets.</p>`;
+    return `<p class="muted">${tr('networks.confMissing', { path: escapeHtml(conf.path), range: '<code>192.168.56.0/21</code>', ruleFormat: '<code>* &lt;CIDR&gt; ...</code>' })}</p>`;
   }
   if (!conf.lines.length) {
-    return `<p class="muted">${escapeHtml(conf.path)} exists but has no rules - nothing outside VirtualBox's default range (<code>192.168.56.0/21</code>) is allowed.</p>`;
+    return `<p class="muted">${tr('networks.confEmpty', { path: escapeHtml(conf.path), range: '<code>192.168.56.0/21</code>' })}</p>`;
   }
   const rows = conf.lines.map((l) => `<tr><td><code>${escapeHtml(l)}</code></td></tr>`).join('');
   return `
-    <p class="muted">From ${escapeHtml(conf.path)} - an IP outside these ranges fails with a misleading "permission denied" when you try to set it below.</p>
+    <p class="muted">${tr('networks.confFound', { path: escapeHtml(conf.path) })}</p>
     <table><tbody>${rows}</tbody></table>`;
 }
 
@@ -142,69 +143,70 @@ function networksPage({
   natNetworks = [], hostOnlyIfs = [], dhcpByInterface = {}, bridgedIfs = [], internalNets = [], networksConf = null,
   username = '', error = '', notice = '', lang = 'en',
 } = {}) {
+  const tr = (key, vars) => i18n.t(lang, key, vars);
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
 
   const body = `
     <div class="card">
-      <h1>Networks</h1>
-      <p class="muted">Host-wide networks any VM can attach to. To pick which network a specific VM's adapter uses, edit that VM's Network tab.</p>
+      <h1>${escapeHtml(tr('nav.networks'))}</h1>
+      <p class="muted">${escapeHtml(tr('networks.subtitle'))}</p>
       ${errorHtml}
       ${noticeHtml}
     </div>
 
     <div class="card">
-      <h2>NAT Networks</h2>
+      <h2>${escapeHtml(tr('networks.natNetworksTitle'))}</h2>
       <table>
-        <thead><tr><th>Name</th><th>Network</th><th>Gateway</th><th>DHCP</th><th>IPv6</th><th></th></tr></thead>
-        <tbody>${natNetworkRows(natNetworks)}</tbody>
+        <thead><tr><th>${escapeHtml(tr('common.name'))}</th><th>${escapeHtml(tr('networks.network'))}</th><th>${escapeHtml(tr('networks.gateway'))}</th><th>DHCP</th><th>IPv6</th><th></th></tr></thead>
+        <tbody>${natNetworkRows(natNetworks, tr)}</tbody>
       </table>
-      <h3 style="font-size:1rem">Add a NAT network</h3>
+      <h3 style="font-size:1rem">${escapeHtml(tr('networks.addNatNetwork'))}</h3>
       <form method="POST" action="/networks/natnet/create">
         <div class="grid">
-          <div class="field"><label>Name</label><input type="text" name="name" maxlength="64" required placeholder="e.g. NatNetwork"></div>
-          <div class="field"><label>Network (CIDR)</label><input type="text" name="network" required placeholder="10.0.2.0/24"></div>
+          <div class="field"><label>${escapeHtml(tr('common.name'))}</label><input type="text" name="name" maxlength="64" required placeholder="e.g. NatNetwork"></div>
+          <div class="field"><label>${escapeHtml(tr('networks.networkCidr'))}</label><input type="text" name="network" required placeholder="10.0.2.0/24"></div>
         </div>
-        <div class="field field-toggle"><label><input type="checkbox" name="dhcp" value="on" checked> Enable DHCP</label></div>
-        <button type="submit">Add NAT network</button>
+        <div class="field field-toggle"><label><input type="checkbox" name="dhcp" value="on" checked> ${escapeHtml(tr('networks.enableDhcp'))}</label></div>
+        <button type="submit">${escapeHtml(tr('networks.addNatNetworkBtn'))}</button>
       </form>
     </div>
 
     <div class="card">
-      <h2>Allowed host-only/NAT subnets</h2>
-      ${networksConfHtml(networksConf)}
+      <h2>${escapeHtml(tr('networks.allowedSubnetsTitle'))}</h2>
+      ${networksConfHtml(networksConf, tr)}
     </div>
 
     <div class="card">
-      <h2>Host-only Interfaces</h2>
+      <h2>${escapeHtml(tr('networks.hostOnlyTitle'))}</h2>
       <table>
-        <thead><tr><th>Name</th><th>IP / Netmask</th><th>Status</th><th>DHCP</th><th></th></tr></thead>
-        <tbody>${hostOnlyRows(hostOnlyIfs, dhcpByInterface)}</tbody>
+        <thead><tr><th>${escapeHtml(tr('common.name'))}</th><th>${escapeHtml(tr('networks.ipNetmask'))}</th><th>${escapeHtml(tr('common.status'))}</th><th>DHCP</th><th></th></tr></thead>
+        <tbody>${hostOnlyRows(hostOnlyIfs, dhcpByInterface, tr)}</tbody>
       </table>
       <form method="POST" action="/networks/hostonly/create" style="margin-top:0.8rem">
-        <button type="submit">Create host-only interface</button>
+        <button type="submit">${escapeHtml(tr('networks.createHostOnlyBtn'))}</button>
       </form>
     </div>
 
     <div class="card">
-      <h2>Bridged Interfaces <span class="muted" style="font-weight:400">(the host's own NICs - read-only)</span></h2>
+      <h2>${escapeHtml(tr('networks.bridgedTitle'))} <span class="muted" style="font-weight:400">(${escapeHtml(tr('networks.bridgedReadOnlyNote'))})</span></h2>
       <table>
-        <thead><tr><th>Name</th><th>IP Address</th><th>Status</th></tr></thead>
-        <tbody>${bridgedRows(bridgedIfs)}</tbody>
+        <thead><tr><th>${escapeHtml(tr('common.name'))}</th><th>${escapeHtml(tr('networks.ipAddress'))}</th><th>${escapeHtml(tr('common.status'))}</th></tr></thead>
+        <tbody>${bridgedRows(bridgedIfs, tr)}</tbody>
       </table>
     </div>
 
     <div class="card">
-      <h2>Internal Networks <span class="muted" style="font-weight:400">(named on a VM's NIC - read-only)</span></h2>
+      <h2>${escapeHtml(tr('networks.internalTitle'))} <span class="muted" style="font-weight:400">(${escapeHtml(tr('networks.internalReadOnlyNote'))})</span></h2>
       <table>
-        <thead><tr><th>Name</th></tr></thead>
-        <tbody>${internalNetRows(internalNets)}</tbody>
+        <thead><tr><th>${escapeHtml(tr('common.name'))}</th></tr></thead>
+        <tbody>${internalNetRows(internalNets, tr)}</tbody>
       </table>
     </div>
 
     <script src="/public/networks.js" defer></script>`;
 
-  return layout({ title: 'Networks', body, showNav: true, username, lang });
+  return layout({ title: tr('nav.networks'), body, showNav: true, username, lang });
 }
 
 module.exports = { networksPage };

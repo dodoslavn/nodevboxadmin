@@ -2,12 +2,21 @@
 
 // Dashboard live-status polling + start/stop actions. Vanilla JS, no deps.
 // VMs are keyed by their VirtualBox UUID (data-vm-uuid).
+//
+// User-facing strings are read from data-i18n-* attributes on the
+// [data-role="poll-status"] element (rendered by views/dashboard.js, already
+// translated server-side via lib/i18n.js) rather than hardcoded here - same
+// idiom as public/detail.js.
 
 (function () {
   var POLL_INTERVAL_MS = 5000;
   var tables = document.querySelectorAll('table.vm-table');
   if (!tables.length) return;
   var pollStatus = document.querySelector('[data-role="poll-status"]');
+
+  function i18n(name) {
+    return pollStatus ? pollStatus.getAttribute('data-i18n-' + name) || '' : '';
+  }
 
   function badgeClass(state) {
     if (state === 'running') return 'badge badge-running';
@@ -62,12 +71,12 @@
         if (data.error) {
           setNotice(data.error, true);
         } else {
-          setNotice('Live status \u2014 last updated ' + new Date().toLocaleTimeString(), false);
+          setNotice(i18n('live-status-updated') + ' ' + new Date().toLocaleTimeString(), false);
         }
       })
       .catch(function (err) {
         if (err && err.message === 'unauthorized') return;
-        setNotice('Could not refresh status (will retry).', true);
+        setNotice(i18n('could-not-refresh'), true);
       });
   }
 
@@ -78,13 +87,13 @@
     if (!uuid) return;
 
     if (action === 'stop') {
-      if (!window.confirm('Send ACPI shutdown to this VM?')) return;
+      if (!window.confirm(i18n('confirm-stop'))) return;
     }
 
     row.setAttribute('data-busy', '1');
     var buttons = row.querySelectorAll('button[data-action]');
     buttons.forEach(function (b) { b.disabled = true; });
-    setNotice((action === 'start' ? 'Starting' : 'Stopping') + ' VM\u2026', false);
+    setNotice((action === 'start' ? i18n('starting') : i18n('stopping')) + '…', false);
 
     var body = action === 'stop' ? 'mode=acpi' : '';
     fetch('/vms/' + encodeURIComponent(uuid) + '/' + action, {
@@ -107,14 +116,14 @@
       })
       .then(function (r) {
         if (!r.ok) {
-          setNotice('Action failed: ' + (r.message || 'unknown error'), true);
+          setNotice(i18n('action-failed') + ': ' + (r.message || i18n('unknown-error')), true);
         } else {
-          setNotice(action === 'start' ? 'VM start requested.' : 'VM stop requested.', false);
+          setNotice(action === 'start' ? i18n('start-requested') : i18n('stop-requested'), false);
         }
       })
       .catch(function (err) {
         if (err && err.message === 'unauthorized') return;
-        setNotice('Action failed (network error).', true);
+        setNotice(i18n('network-error'), true);
       })
       .then(function () {
         row.removeAttribute('data-busy');

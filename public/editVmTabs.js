@@ -50,9 +50,9 @@
   } catch (e) {
     // Ignore; fall back to the first tab.
   }
-  // A URL hash (e.g. from the Cloud-Init page's "Mount to VM" link, which
-  // sends the admin here as #storage) wins over the remembered tab - it's a
-  // deliberate one-time navigation target, not a preference to override.
+  // A URL hash (e.g. a link elsewhere in the app sending the admin straight
+  // to #storage) wins over the remembered tab - it's a deliberate one-time
+  // navigation target, not a preference to override.
   var hashTab = window.location.hash.slice(1);
   if (hashTab && document.querySelector('[data-tab-panel="' + hashTab + '"]')) {
     initial = hashTab;
@@ -60,29 +60,27 @@
   activate(initial);
 })();
 
-// Confirm-before-submit for "Remove controller" forms. Uses a data attribute
-// + addEventListener rather than an inline onsubmit="confirm('...name...')"
-// string: the controller name is read back via getAttribute (a plain string,
-// never re-parsed as HTML or JS), so it can't break out of a JS string
-// literal the way an HTML-escaped value inlined into an attribute could.
+// Confirm-before-submit for "Remove controller" / "Delete disk" forms. The
+// full, already-translated confirm message is rendered server-side into the
+// data attribute (views/editVm.js, via lib/i18n.js). Uses a data attribute +
+// addEventListener rather than an inline onsubmit="confirm('...')" string:
+// read back via getAttribute (a plain string, never re-parsed as HTML or
+// JS), so it can't break out of a JS string literal the way an HTML-escaped
+// value inlined into an attribute could.
 (function () {
   document.querySelectorAll('form[data-confirm-remove-controller]').forEach(function (form) {
     form.addEventListener('submit', function (ev) {
-      var name = form.getAttribute('data-confirm-remove-controller');
-      if (!window.confirm('Remove controller ' + name + '? Its attachments will be detached first.')) {
+      if (!window.confirm(form.getAttribute('data-confirm-remove-controller'))) {
         ev.preventDefault();
       }
     });
   });
 })();
 
-// Same pattern for "Delete disk": permanently removes the file from the
-// host, so it gets its own, stronger warning naming the actual path.
 (function () {
   document.querySelectorAll('form[data-confirm-delete-disk]').forEach(function (form) {
     form.addEventListener('submit', function (ev) {
-      var medium = form.getAttribute('data-confirm-delete-disk');
-      if (!window.confirm('Permanently delete this disk file from the host?\n\n' + medium + '\n\nThis cannot be undone.')) {
+      if (!window.confirm(form.getAttribute('data-confirm-delete-disk'))) {
         ev.preventDefault();
       }
     });
@@ -116,7 +114,10 @@
     var fixed = range.min === range.max;
     portInput.disabled = fixed;
     portInput.value = fixed ? range.min : Math.min(Math.max(portInput.value || range.min, range.min), range.max);
-    if (help) help.textContent = fixed ? 'Fixed at ' + range.min + ' for this bus.' : 'Range: ' + range.min + '-' + range.max + '.';
+    if (help) {
+      var template = fixed ? help.getAttribute('data-i18n-fixed') : help.getAttribute('data-i18n-range');
+      help.textContent = (template || '').replace('{min}', range.min).replace('{max}', range.max);
+    }
   }
 
   busSelect.addEventListener('change', applyRange);

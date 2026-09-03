@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout, escapeHtml } = require('./layout');
+const i18n = require('../lib/i18n');
 
 // Cloud-init seed ISO builder. One form serves both "Save template" and
 // "Generate ISO" (two submit buttons with different formaction) so the
@@ -21,7 +22,7 @@ function templateOptions(templates) {
     .join('');
 }
 
-function templateDeleteRows(templates) {
+function templateDeleteRows(templates, tr) {
   if (!templates.length) return '';
   const rows = templates
     .map(
@@ -30,8 +31,8 @@ function templateDeleteRows(templates) {
         <td>${escapeHtml(t.name)}</td>
         <td>
           <form method="POST" action="/cloud-init/templates/${encodeURIComponent(t.id)}/delete" style="display:inline"
-                data-confirm-delete-template="${escapeHtml(t.name)}">
-            <button type="submit" class="btn-sm danger">Delete</button>
+                data-confirm-delete-template="${escapeHtml(tr('cloudInit.confirmDeleteTemplate', { name: t.name }))}">
+            <button type="submit" class="btn-sm danger">${escapeHtml(tr('common.delete'))}</button>
           </form>
         </td>
       </tr>`
@@ -39,13 +40,13 @@ function templateDeleteRows(templates) {
     .join('');
   return `
     <table>
-      <thead><tr><th>Saved template</th><th></th></tr></thead>
+      <thead><tr><th>${escapeHtml(tr('cloudInit.savedTemplate'))}</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
-function isoRows(isos) {
-  if (!isos.length) return '<tr><td colspan="4"><em>No ISOs generated yet.</em></td></tr>';
+function isoRows(isos, tr) {
+  if (!isos.length) return `<tr><td colspan="4"><em>${escapeHtml(tr('cloudInit.noIsosYet'))}</em></td></tr>`;
   return isos
     .map(
       (iso) => `
@@ -55,8 +56,8 @@ function isoRows(isos) {
         <td>${escapeHtml(new Date(iso.mtime).toLocaleString())}</td>
         <td>
           <form method="POST" action="/cloud-init/isos/${encodeURIComponent(iso.filename)}/delete" style="display:inline"
-                data-confirm-delete-iso="${escapeHtml(iso.filename)}">
-            <button type="submit" class="btn-sm danger">Delete</button>
+                data-confirm-delete-iso="${escapeHtml(tr('cloudInit.confirmDeleteIso', { name: iso.filename }))}">
+            <button type="submit" class="btn-sm danger">${escapeHtml(tr('common.delete'))}</button>
           </form>
         </td>
       </tr>`
@@ -74,72 +75,73 @@ function cloudInitPage({
   notice = '',
   lang = 'en',
 } = {}) {
+  const tr = (key, vars) => i18n.t(lang, key, vars);
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
   const templatesJson = escapeHtml(JSON.stringify(templates));
 
   const body = `
     <div class="card">
-      <h1>Cloud-Init</h1>
-      <p class="muted">Build NoCloud seed ISOs for unattended VM installs. Edit the cloud-config below (use <code>{{HOSTNAME}}</code> as a placeholder - it's filled in per-build from meta-data's <code>local-hostname</code>), save it as a reusable template, then generate an ISO from it.</p>
+      <h1>${tr('nav.cloudInit')}</h1>
+      <p class="muted">${tr('cloudInit.intro', { hostnameCode: '<code>{{HOSTNAME}}</code>', localHostnameCode: '<code>local-hostname</code>' })}</p>
       ${errorHtml}
       ${noticeHtml}
 
       <form method="POST" id="cloud-init-form" data-templates="${templatesJson}">
         <div class="field">
-          <label>Load a saved template</label>
+          <label>${escapeHtml(tr('cloudInit.loadTemplate'))}</label>
           <select id="cloud-init-template-select">
-            <option value="">— new / unsaved —</option>
+            <option value="">${escapeHtml(tr('cloudInit.newUnsaved'))}</option>
             ${templateOptions(templates)}
           </select>
         </div>
         <input type="hidden" name="id" id="cloud-init-template-id" value="">
         <div class="field">
-          <label>Template name</label>
+          <label>${escapeHtml(tr('cloudInit.templateName'))}</label>
           <input type="text" name="name" id="cloud-init-template-name" maxlength="64" placeholder="e.g. debian-generic">
         </div>
         <div class="field">
-          <label>Cloud-config (user-data)</label>
+          <label>${escapeHtml(tr('cloudInit.cloudConfig'))}</label>
           <textarea name="userData" id="cloud-init-userdata" rows="18">${escapeHtml(defaultTemplate)}</textarea>
-          <span class="field-help">Standard #cloud-config YAML - same format as any cloud-init NoCloud seed.</span>
+          <span class="field-help">${escapeHtml(tr('cloudInit.cloudConfigHelp'))}</span>
         </div>
         <div class="field">
-          <label>Meta-data (JSON)</label>
+          <label>${escapeHtml(tr('cloudInit.metaData'))}</label>
           <textarea name="metaData" id="cloud-init-metadata" rows="4">${escapeHtml(defaultMetaData)}</textarea>
-          <span class="field-help"><code>instance-id</code> is always regenerated on build regardless of what's here, so cloud-init reliably re-runs on the new ISO. Set <code>local-hostname</code> here - it's the single source of truth for hostname, also used to fill <code>{{HOSTNAME}}</code> above.</span>
+          <span class="field-help">${tr('cloudInit.metaDataHelp', { instanceIdCode: '<code>instance-id</code>', localHostnameCode: '<code>local-hostname</code>', hostnameCode: '<code>{{HOSTNAME}}</code>' })}</span>
         </div>
         <div class="field">
-          <label>Network-config (optional)</label>
+          <label>${escapeHtml(tr('cloudInit.networkConfig'))}</label>
           <textarea name="networkConfig" id="cloud-init-networkconfig" rows="4" placeholder="version: 2&#10;ethernets:&#10;  enp0s3:&#10;    dhcp4: true"></textarea>
-          <span class="field-help">Standard cloud-init network-config YAML. Leave blank to omit - cloud-init falls back to its own default (typically DHCP on all interfaces).</span>
+          <span class="field-help">${escapeHtml(tr('cloudInit.networkConfigHelp'))}</span>
         </div>
         <div class="actions" style="justify-content:flex-end">
-          <button type="submit" formaction="/cloud-init/templates/save" formnovalidate>Save template</button>
+          <button type="submit" formaction="/cloud-init/templates/save" formnovalidate>${escapeHtml(tr('cloudInit.saveTemplateBtn'))}</button>
         </div>
         <div class="field">
-          <label>ISO name</label>
+          <label>${escapeHtml(tr('cloudInit.isoName'))}</label>
           <div style="display:flex;gap:0.5rem;align-items:center">
             <input type="text" name="outputName" maxlength="64" placeholder="e.g. web01" required style="flex:1">
-            <button type="submit" formaction="/cloud-init/build" style="margin-top:0">Generate ISO</button>
+            <button type="submit" formaction="/cloud-init/build" style="margin-top:0">${escapeHtml(tr('cloudInit.generateIsoBtn'))}</button>
           </div>
-          <span class="field-help">Builds the seed ISO from everything above, written as <code>&lt;ISO name&gt;.iso</code>.</span>
+          <span class="field-help">${tr('cloudInit.isoNameHelp', { isoNameCode: '<code>&lt;' + escapeHtml(tr('cloudInit.isoName')) + '&gt;.iso</code>' })}</span>
         </div>
       </form>
 
-      ${templateDeleteRows(templates)}
+      ${templateDeleteRows(templates, tr)}
     </div>
 
     <div class="card">
-      <h2>Generated ISOs</h2>
+      <h2>${escapeHtml(tr('cloudInit.generatedIsos'))}</h2>
       <table>
-        <thead><tr><th>Path</th><th>Size</th><th>Created</th><th></th></tr></thead>
-        <tbody>${isoRows(isos)}</tbody>
+        <thead><tr><th>${escapeHtml(tr('disks.path'))}</th><th>${escapeHtml(tr('disks.size'))}</th><th>${escapeHtml(tr('cloudInit.created'))}</th><th></th></tr></thead>
+        <tbody>${isoRows(isos, tr)}</tbody>
       </table>
     </div>
 
     <script src="/public/cloudinit.js" defer></script>`;
 
-  return layout({ title: 'Cloud-Init', body, showNav: true, username, lang });
+  return layout({ title: tr('nav.cloudInit'), body, showNav: true, username, lang });
 }
 
 module.exports = { cloudInitPage };

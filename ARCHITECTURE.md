@@ -201,9 +201,15 @@ nodevboxadmin/
   any key a locale doesn't have. `?lang=xx` is handled centrally in
   `server.js`'s `handleRequest` (sets the `lang` cookie, redirects, works on
   any GET path) rather than per-route, so every page picks it up uniformly.
-  Scope so far: shared chrome only - nav labels, footer, and the login page
-  (`views/layout.js`, `views/login.js`); page bodies (dashboard, disks,
-  etc.) are still English-only pending a follow-up translation pass.
+  Every page (`views/*.js`) is fully translated, including per-page confirm
+  dialogs and dynamic status text in `public/*.js` - those read their
+  already-translated strings back from `data-i18n-*` attributes rendered
+  server-side (e.g. `views/vmDetail.js` + `public/detail.js`,
+  `views/dashboard.js` + `public/app.js`) rather than hardcoding English in
+  client JS, so no separate client-side i18n mechanism is needed. Each
+  `lang/*.json` has the same ~355 keys as `lang/en.json` (verified by a
+  key-diff check); `t()`'s fallback to English covers any future page added
+  without every locale being updated first.
 - **`config/password-reset.js`** — run manually once at deploy time (`node
   config/password-reset.js`), prompts for username/password on stdin, writes
   `data/config.json` with a fresh scrypt hash + salt. Not exposed over HTTP.
