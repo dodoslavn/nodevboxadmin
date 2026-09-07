@@ -23,8 +23,18 @@
     templates = [];
   }
 
+  // Track which template is currently loaded so the name-change handler below
+  // knows whether the user is updating the existing template or creating a new
+  // one. When the user changes the name to something different from the loaded
+  // template's name, clear the hidden id field so saving creates a new
+  // template rather than overwriting the original.
+  var loadedId = '';
+  var loadedName = '';
+
   select.addEventListener('change', function () {
     var id = select.value;
+    loadedId = '';
+    loadedName = '';
     if (!id) {
       idField.value = '';
       nameField.value = '';
@@ -38,11 +48,26 @@
       }
     }
     if (!match) return;
+    loadedId = match.id;
+    loadedName = match.name;
     idField.value = match.id;
     nameField.value = match.name;
     textarea.value = match.userData;
     metaDataField.value = match.metaData || '';
     networkConfigField.value = match.networkConfig || '';
+  });
+
+  // If the user changes the name after loading a template, treat it as a new
+  // template (clear id) so the save doesn't silently rename the original.
+  // If they type the original name back, restore the id so it acts as an
+  // update again.
+  nameField.addEventListener('input', function () {
+    if (!loadedId) return;
+    if (nameField.value === loadedName) {
+      idField.value = loadedId;
+    } else {
+      idField.value = '';
+    }
   });
 })();
 

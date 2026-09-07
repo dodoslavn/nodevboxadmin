@@ -354,6 +354,39 @@ router.post('/disks/:kind/:uuid/detach', async (req, res, params) => {
   }
 });
 
+// Grows a registered disk image to a new size. Only growing is supported;
+// VBoxManage rejects shrink requests. The disk's VM must be powered off.
+router.post('/disks/:kind/:uuid/resize', async (req, res, params) => {
+  if (!auth.requireAuth(req, res)) return;
+  const body = await parseFormBody(req);
+  const username = await auth.currentUsername();
+  const kind = DISK_KINDS.includes(params.kind) ? params.kind : null;
+
+  if (!kind || kind !== 'disk') {
+    redirectWithFlash(res, '/disks', { error: 'Resize is only supported for hard disks.' });
+    return;
+  }
+
+  const rawSize = parseInt(body.sizeMB, 10);
+  if (!rawSize || rawSize < 1) {
+    redirectWithFlash(res, '/disks', { error: 'A valid size in MB is required.' });
+    return;
+  }
+  const sizeMB = Math.min(rawSize, 2000000);
+
+  try {
+    const media = await vbox.listAllMedia();
+    const record = media.find((m) => m.kind === kind && m.UUID === params.uuid);
+    if (!record) throw new vbox.VBoxError('Medium not found.', { code: 'NOT_FOUND' });
+    await vbox.resizeDisk(params.uuid, sizeMB);
+    await audit.logAction({ action: 'disk-resize', vmName: null, result: 'ok', message: `${record.Location} → ${sizeMB} MB`, actor: username });
+    redirectWithFlash(res, '/disks', { notice: `Resized to ${sizeMB} MB.` });
+  } catch (err) {
+    await audit.logAction({ action: 'disk-resize', vmName: null, result: 'error', message: err.message, actor: username });
+    redirectWithFlash(res, '/disks', { error: `Could not resize: ${err.message}` });
+  }
+});
+
 // --- Cloud-Init (NoCloud seed ISO builder + saved template registry; see
 // lib/cloudinit.js. Generated ISOs are plain files, not yet known to
 // VirtualBox until attached to a VM - "mounting" one just reuses the

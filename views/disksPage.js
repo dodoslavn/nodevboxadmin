@@ -50,6 +50,21 @@ function detachButtonsHtml(m, tr) {
     .join('');
 }
 
+function resizeCellHtml(m, tr) {
+  if (m.kind !== 'disk') return '<td></td>';
+  const currentMB = parseMBytes(m.Capacity);
+  const minVal = currentMB ? currentMB + 1 : 1;
+  return `
+    <td>
+      <form method="POST" action="/disks/${m.kind}/${encodeURIComponent(m.UUID)}/resize" style="display:flex;gap:0.25rem;align-items:center"
+            data-confirm-resize-disk="${escapeHtml(tr('disks.confirmResize', { path: m.Location || m.UUID }))}">
+        <input type="number" name="sizeMB" min="${minVal}" max="2000000" style="width:5.5rem"
+               placeholder="MB" title="${escapeHtml(tr('disks.resizeTooltip'))}">
+        <button type="submit" class="btn-sm btn-warn">${escapeHtml(tr('disks.resize'))}</button>
+      </form>
+    </td>`;
+}
+
 function mediaRows(media, tr) {
   if (!media.length) return `<tr><td colspan="6"><em>${escapeHtml(tr('disks.noMedia'))}</em></td></tr>`;
   const labels = kindLabels(tr);
@@ -68,11 +83,16 @@ function mediaRows(media, tr) {
         : ` <span class="badge badge-missing" title="${escapeHtml(tr('disks.missingTitle'))}">${escapeHtml(tr('disks.missing'))}</span>`;
       return `
       <tr>
+        <td colspan="6" style="padding-bottom:0;border-bottom:none;word-break:break-all">
+          <span class="muted" style="font-size:0.85em">${escapeHtml(m.Location || '')}${missingBadge}</span>
+        </td>
+      </tr>
+      <tr>
         <td>${escapeHtml(labels[m.kind] || m.kind)}</td>
-        <td style="word-break:break-all">${escapeHtml(m.Location || '')}${missingBadge}</td>
         <td>${escapeHtml(m.Capacity || '')}</td>
         <td>${usedByHtml(m, tr)}</td>
         <td>${detachButtonsHtml(m, tr)}</td>
+        ${resizeCellHtml(m, tr)}
         <td>${deleteAction}</td>
       </tr>`;
     })
@@ -83,6 +103,13 @@ function formatBytes(n) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Parses "20480 MBytes" → 20480, or returns null if not parseable.
+function parseMBytes(capacityStr) {
+  if (!capacityStr) return null;
+  const m = /^(\d+)\s*MBytes?$/i.exec(capacityStr.trim());
+  return m ? parseInt(m[1], 10) : null;
 }
 
 function libraryRows(files, kind, tr) {
@@ -159,7 +186,7 @@ function disksPage({
       ${errorHtml}
       ${noticeHtml}
       <table>
-        <thead><tr><th>${escapeHtml(tr('disks.type'))}</th><th>${escapeHtml(tr('disks.path'))}</th><th>${escapeHtml(tr('disks.size'))}</th><th>${escapeHtml(tr('disks.attachedTo'))}</th><th></th><th></th></tr></thead>
+        <thead><tr><th>${escapeHtml(tr('disks.type'))}</th><th>${escapeHtml(tr('disks.size'))}</th><th>${escapeHtml(tr('disks.attachedTo'))}</th><th></th><th></th><th></th></tr></thead>
         <tbody>${mediaRows(media, tr)}</tbody>
       </table>
     </div>

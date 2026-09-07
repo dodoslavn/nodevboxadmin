@@ -123,6 +123,9 @@
   "disks.sizeMb": "Size (MB)",
   "disks.format": "Format",
   "disks.createDiskBtn": "Create disk",
+  "disks.resize": "Resize",
+  "disks.resizeTooltip": "Grow disk to this size in MB (shrinking is not supported)",
+  "disks.confirmResize": "Resize this disk? Only growing is supported — VirtualBox will reject any size smaller than the current one. The VM must be powered off.\n\n{path}",
   "disks.confirmDetach": "Detach this disk?\n\n{path}",
   "disks.confirmRemoveMedium": "Remove this medium from VirtualBox's registry? The file itself is left on disk.\n\n{path}",
 

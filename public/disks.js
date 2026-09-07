@@ -25,3 +25,13 @@
     });
   });
 })();
+
+(function () {
+  document.querySelectorAll('form[data-confirm-resize-disk]').forEach(function (form) {
+    form.addEventListener('submit', function (ev) {
+      if (!window.confirm(form.getAttribute('data-confirm-resize-disk'))) {
+        ev.preventDefault();
+      }
+    });
+  });
+})();
