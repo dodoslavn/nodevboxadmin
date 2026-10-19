@@ -197,8 +197,10 @@ router.get('/api/vms/status', async (req, res) => {
 
 router.get('/host', async (req, res) => {
   if (!auth.requireAuth(req, res)) return;
-  const [info, username] = await Promise.all([hostinfo.getHostInfo(), auth.currentUsername()]);
-  html(res, hostPage({ info, username, lang: req.lang }));
+  const [info, resources, username] = await Promise.all([
+    hostinfo.getHostInfo(), hostinfo.getResourceUsage(), auth.currentUsername(),
+  ]);
+  html(res, hostPage({ info, resources, username, lang: req.lang }));
 });
 
 // --- Virtual media (host-wide - every registered disk/ISO/floppy, not
@@ -893,6 +895,31 @@ router.post('/vms/:uuid/delete', async (req, res, params) => {
 
 // --- Edit a VM's settings (name, memory, cpus) ---
 
+// Attachment types whose NIC "target" names a real host-side interface we can
+// enumerate and validate against (bridged -> physical/bridgeable NIC, hostonly
+// -> vboxnetN). intnet/natnetwork targets are free-form names, so they only
+// get the "non-empty" check below, not interface-existence validation.
+const NIC_TARGET_LABEL = {
+  bridged: 'bridged (host) interface name',
+  hostonly: 'host-only interface name',
+  intnet: 'internal network name',
+  natnetwork: 'NAT network name',
+};
+
+// Host interfaces a Bridged/Host-only adapter may attach to, for the edit
+// form's autocomplete and for server-side validation. Best-effort: a listing
+// failure must not block editing, so each falls back to an empty list.
+async function listNicHostInterfaces() {
+  const [bridged, hostonly] = await Promise.all([
+    vbox.listBridgedInterfaces().catch(() => []),
+    vbox.listHostOnlyInterfaces().catch(() => []),
+  ]);
+  return {
+    bridged: bridged.map((i) => i.Name).filter(Boolean),
+    hostonly: hostonly.map((i) => i.Name).filter(Boolean),
+  };
+}
+
 router.get('/vms/:uuid/edit', async (req, res, params) => {
   if (!auth.requireAuth(req, res)) return;
   const username = await auth.currentUsername();
@@ -964,9 +991,10 @@ router.get('/vms/:uuid/edit', async (req, res, params) => {
       autostartdelay: info['autostart-delay'] || '0',
     };
     const storage = vbox.parseStorage(info);
+    const hostIfs = await listNicHostInterfaces();
     html(res, editVmPage({
       vm, username, storage, storageBuses: vbox.STORAGE_BUSES, diskFormats: vbox.DISK_FORMATS,
-      busPortRanges: vbox.BUS_PORT_RANGE, natRules, error: flashError, notice: flashNotice, lang: req.lang,
+      busPortRanges: vbox.BUS_PORT_RANGE, natRules, hostIfs, error: flashError, notice: flashNotice, lang: req.lang,
     }));
   } catch (err) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -978,6 +1006,9 @@ router.post('/vms/:uuid/edit', async (req, res, params) => {
   if (!auth.requireAuth(req, res)) return;
   const body = await parseFormBody(req);
   const username = await auth.currentUsername();
+  // Needed both to validate bridged/host-only NIC targets below and to
+  // repopulate the form's interface autocomplete if we have to re-render.
+  const hostIfs = await listNicHostInterfaces();
 
   const name = (body.name || '').trim();
   const memoryMB = Math.min(Math.max(parseInt(body.memoryMB, 10) || 0, 4), 131072);
@@ -1032,6 +1063,17 @@ router.post('/vms/:uuid/edit', async (req, res, params) => {
     if (macaddress && macaddress !== 'auto' && !MAC_RE.test(macaddress)) {
       nicError = `Adapter ${n}: MAC address must be "auto" or 12 hex digits.`;
     }
+    // bridged/hostonly/intnet/natnetwork all need a target; without one the
+    // adapter attaches to nothing and the VM fails to start (VBoxManage
+    // accepts the empty attachment silently, the error only surfaces at boot).
+    if (NIC_TARGET_LABEL[attachment] && !target) {
+      nicError = `Adapter ${n}: "${attachment}" networking needs a ${NIC_TARGET_LABEL[attachment]} — leaving it blank attaches the adapter to nothing and the VM will fail to start.`;
+    } else if ((attachment === 'bridged' || attachment === 'hostonly') && target
+               && hostIfs[attachment].length && !hostIfs[attachment].includes(target)) {
+      // Only reject against a non-empty list we actually fetched, so a listing
+      // failure can't block a save. Catches the typo'd-interface case.
+      nicError = `Adapter ${n}: no ${NIC_TARGET_LABEL[attachment]} "${target}" on this host. Available: ${hostIfs[attachment].join(', ')}.`;
+    }
     nics.push({ index: n, attachment, nictype, macaddress, target, cableconnected });
   }
   const IOBASE_RE = /^0x[0-9A-Fa-f]{1,4}$/;
@@ -1082,7 +1124,7 @@ router.post('/vms/:uuid/edit', async (req, res, params) => {
       clipboardmode, draganddrop, snapshotfolder, autostartdelay,
       clipboardfiletransfers: clipboardfiletransfers === 'enabled', autostartenabled: autostartenabled === 'on',
     };
-    html(res, editVmPage({ vm, username, error, lang: req.lang }), 400);
+    html(res, editVmPage({ vm, username, error, hostIfs, lang: req.lang }), 400);
   };
 
   if (!VM_NAME_RE.test(name)) {

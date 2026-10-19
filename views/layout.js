@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('../config/config.json');
+const { version: VERSION } = require('../package.json');
 const i18n = require('../lib/i18n');
 
 // Shared HTML shell + minimal CSS. Plain template literals, no engine.
@@ -199,7 +200,7 @@ function layout({ title, body, showNav = false, username = '', loginChrome = fal
     : `<main>${body}</main>`;
 
   const footer = `<footer>
-    <a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(PRODUCT_NAME)}</a> ${escapeHtml(i18n.t(lang, 'footer.onGithub'))}
+    <a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(PRODUCT_NAME)}</a> <span class="muted">v${escapeHtml(VERSION)}</span> ${escapeHtml(i18n.t(lang, 'footer.onGithub'))}
     ${langSwitcherHtml(lang)}
   </footer>`;
 
@@ -220,4 +221,4 @@ function layout({ title, body, showNav = false, username = '', loginChrome = fal
 </html>`;
 }
 
-module.exports = { layout, escapeHtml, PRODUCT_NAME, BRAND_NAME, REPO_URL };
+module.exports = { layout, escapeHtml, PRODUCT_NAME, BRAND_NAME, REPO_URL, VERSION };

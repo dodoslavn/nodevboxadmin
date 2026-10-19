@@ -79,12 +79,13 @@ function numField(id, label, value, { min, max, help } = {}) {
     </div>`;
 }
 
-function textField(id, label, value, { maxlength, required, placeholder } = {}) {
+function textField(id, label, value, { maxlength, required, placeholder, list } = {}) {
   return `
     <div class="field">
       <label for="${id}">${escapeHtml(label)}</label>
       <input type="text" id="${id}" name="${id}" value="${escapeHtml(String(value ?? ''))}"
              ${maxlength ? `maxlength="${maxlength}"` : ''} ${required ? 'required' : ''}
+             ${list ? `list="${escapeHtml(list)}"` : ''}
              ${placeholder ? `placeholder="${escapeHtml(placeholder)}"` : ''}>
     </div>`;
 }
@@ -100,7 +101,7 @@ function toggleField(id, label, on) {
 // text field whose meaning depends on the attachment type (bridged device
 // name, internal network name, host-only adapter, or NAT network name) -
 // mirrors how the real VBox GUI relabels the same field per attachment.
-function nicFields(n, nic, attachOpts, typeOpts, tr) {
+function nicFields(n, nic, attachOpts, typeOpts, tr, ifListId) {
   return `
     <div style="border-top:1px solid #eee;padding-top:0.6rem;margin-top:0.6rem">
       <strong>${escapeHtml(tr('editVm.adapterN', { n }))}</strong>
@@ -110,7 +111,7 @@ function nicFields(n, nic, attachOpts, typeOpts, tr) {
       </div>
       <div class="grid">
         ${textField(`nic${n}mac`, tr('editVm.macAddress'), nic.macaddress, { maxlength: 12, placeholder: 'auto or 12 hex digits' })}
-        ${textField(`nic${n}target`, tr('editVm.networkAdapterName'), nic.target, { maxlength: 64, placeholder: 'e.g. eth0, mynet, NatNetwork' })}
+        ${textField(`nic${n}target`, tr('editVm.networkAdapterName'), nic.target, { maxlength: 64, placeholder: 'e.g. eth0, mynet, NatNetwork', list: ifListId })}
       </div>
       ${toggleField(`nic${n}cable`, tr('editVm.cableConnected'), nic.cableconnected)}
     </div>`;
@@ -451,7 +452,7 @@ function sharedFoldersSection(vm, folders, tr) {
 }
 
 // `vm` = full parsed settings (see server route). Fields default to '' if unknown.
-function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, natRules = {}, lang = 'en' } = {}) {
+function editVmPage({ vm, username = '', error = '', notice = '', storage = [], storageBuses = [], diskFormats = [], busPortRanges = {}, natRules = {}, hostIfs = { bridged: [], hostonly: [] }, lang = 'en' } = {}) {
   const tr = (key, vars) => i18n.t(lang, key, vars);
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   const noticeHtml = notice ? `<p class="notice">${escapeHtml(notice)}</p>` : '';
@@ -469,6 +470,14 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
   const nicAttachOpts = NIC_ATTACHMENTS.map((a) => ({ value: a, label: tr(NIC_ATTACHMENT_KEYS[a] || a) }));
   const nicTypeOpts = NIC_TYPES.map((t) => ({ value: t, label: t }));
   const nics = vm.nics || [];
+  // Host interfaces a Bridged/Host-only adapter can legitimately attach to.
+  // Offered as a <datalist> so the single free-text "target" field (which
+  // also carries free-form intnet/NAT-network names) autocompletes to a real
+  // interface name instead of letting a typo through - a bridged adapter
+  // pointed at a nonexistent interface makes the VM fail to start.
+  const nicIfNames = [...new Set([...(hostIfs.bridged || []), ...(hostIfs.hostonly || [])])];
+  const nicIfListId = 'nic-host-ifaces';
+  const nicIfDatalist = `<datalist id="${nicIfListId}">${nicIfNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join('')}</datalist>`;
   const uartModeOpts = UART_MODES.map((m) => ({ value: m, label: tr(UART_MODE_KEYS[m] || m) }));
   const uartTypeOpts = UART_TYPES.map((t) => ({ value: t, label: t }));
   const uarts = vm.uarts || [];
@@ -620,7 +629,8 @@ function editVmPage({ vm, username = '', error = '', notice = '', storage = [], 
         <div class="tab-panel" data-tab-panel="network">
           <fieldset>
             <legend>${escapeHtml(tr('nav.networks'))}</legend>
-            ${nics.map((nic) => nicFields(nic.index, nic, nicAttachOpts, nicTypeOpts, tr)).join('')}
+            ${nicIfDatalist}
+            ${nics.map((nic) => nicFields(nic.index, nic, nicAttachOpts, nicTypeOpts, tr, nicIfListId)).join('')}
           </fieldset>
         </div>
 
