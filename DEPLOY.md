@@ -193,6 +193,18 @@ of these yourself and VMs stop working or VBoxManage errors only under
 systemd (but work when run manually), that's almost certainly why - remove
 or relax the directive and re-test.
 
+### Restarting the service kills all running VMs
+VMs started through the web UI run as `VBoxHeadless` child processes of the
+service (together with the `VBoxSVC` the app auto-spawns), so they share the
+service's systemd cgroup. With the default `KillMode=control-group`, a
+`systemctl restart`/`stop` (e.g. during a redeploy) SIGKILLs the whole cgroup
+and hard-stops every VM. The unit shipped by `systemd_install.sh` sets
+`KillMode=process` to prevent this - only the `node` process is signalled and
+the VMs keep running across restarts. If you hand-wrote the unit, add
+`KillMode=process` under `[Service]` and `systemctl daemon-reload` (the
+daemon-reload itself does not restart the service, so it won't disturb running
+VMs). Verify with `systemctl show custom-nodevboxadmin -p KillMode`.
+
 ### Screenshot returns 409/503
 409 = VM not running (expected). 503 = VBoxManage not found on the service's
 PATH. 504 = VBoxManage timed out.

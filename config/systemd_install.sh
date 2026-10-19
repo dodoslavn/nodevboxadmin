@@ -54,6 +54,13 @@ Group=$APP_GROUP
 ExecStart=$NODE_BIN $REPO_DIR/server.js
 Restart=on-failure
 RestartSec=5
+# VMs started through the app run as VBoxHeadless children of this service
+# (along with the VBoxSVC the app auto-spawns), so they live in this service's
+# cgroup. With the default KillMode=control-group, stopping or restarting this
+# service SIGKILLs the whole cgroup - i.e. hard-kills every running VM on every
+# app restart/redeploy. KillMode=process signals only the node process, so the
+# VMs (and VBoxSVC) survive across restarts.
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
