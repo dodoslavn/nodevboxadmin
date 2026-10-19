@@ -32,6 +32,11 @@ function moduleRows(modules, checkable, t) {
       let statusHtml;
       if (!checkable) {
         statusHtml = `<span class="badge badge-unknown">${escapeHtml(t('host.unknown'))}</span>`;
+      } else if (m.conflict) {
+        // Conflict module (KVM): loaded is BAD (red), not loaded is good (green).
+        statusHtml = m.loaded
+          ? `<span class="badge badge-missing">${escapeHtml(t('host.loaded'))}</span>`
+          : `<span class="badge badge-running">${escapeHtml(t('host.notLoaded'))}</span>`;
       } else if (m.loaded) {
         statusHtml = `<span class="badge badge-running">${escapeHtml(t('host.loaded'))}</span>`;
       } else if (m.required) {
@@ -39,10 +44,12 @@ function moduleRows(modules, checkable, t) {
       } else {
         statusHtml = `<span class="badge badge-stopped">${escapeHtml(t('host.notLoaded'))}</span>`;
       }
+      const tag = m.required ? ` <span class="muted">(${escapeHtml(t('host.required'))})</span>`
+        : m.conflict ? ` <span class="muted">(${escapeHtml(t('host.mustUnload'))})</span>` : '';
       return `
       <tr>
         <td><code>${escapeHtml(m.name)}</code></td>
-        <td>${escapeHtml(m.purpose)}${m.required ? ` <span class="muted">(${escapeHtml(t('host.required'))})</span>` : ''}</td>
+        <td>${escapeHtml(m.purpose)}${tag}</td>
         <td>${statusHtml}</td>
       </tr>`;
     })
@@ -61,49 +68,31 @@ function hostPage({ info, resources = { available: false }, username = '', lang 
     ? `<code>${escapeHtml(vboxVersion)}</code>`
     : `<span class="error">${escapeHtml(t('host.vboxUnreachable'))}</span>`;
 
-  // KVM holds VT-x/AMD-V when loaded, so for VirtualBox the healthy (green)
-  // state is "not loaded". Loaded -> red badge + which modules.
   const kvmModList = (kvmModules || []).join(', ');
-  let kvmStatusHtml;
-  if (kvmLoaded === null) {
-    kvmStatusHtml = `<span class="badge badge-unknown">${escapeHtml(t('host.unknown'))}</span>`;
-  } else if (!kvmLoaded) {
-    kvmStatusHtml = `<span class="badge badge-running">${escapeHtml(t('host.kvmFree'))}</span>`;
-  } else {
-    kvmStatusHtml = `<span class="badge badge-missing">${escapeHtml(t('host.kvmConflict'))}</span> `
-      + `<span class="muted">${escapeHtml(t('host.kvmConflictHelp', { modules: kvmModList }))}</span>`;
-  }
-
   const requiredMissingBanner = requiredMissing
     ? `<p class="error">${t('host.requiredMissingBanner')}</p>`
     : '';
+  // KVM holds VT-x/AMD-V when loaded, blocking every VM start - keep the loud
+  // banner (the per-module status now also shows in the kernel-modules table).
   const kvmConflictBanner = kvmLoaded
     ? `<p class="error">${t('host.kvmConflictBanner', { modules: escapeHtml(kvmModList) })}</p>`
     : '';
 
+  // "running / all registered" totals, e.g. "10 / 12 vCPUs". hostCores/hostMemMB
+  // shown as muted context below each.
   const resourcesHtml = resources.available
     ? `
       <table class="kv">
-        <thead><tr>
-          <th>${escapeHtml(t('host.colResource'))}</th>
-          <th>${escapeHtml(t('host.colHostTotal'))}</th>
-          <th>${escapeHtml(t('host.colRunningVms'))}</th>
-          <th>${escapeHtml(t('host.colStoppedVms'))}</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <th>${escapeHtml(t('host.cpuCoresLabel'))}</th>
-            <td>${resources.totalCores}</td>
-            <td>${resources.usedCores} vCPU <span class="muted">(${resources.runningCount})</span></td>
-            <td>${resources.assignedOffCores} vCPU <span class="muted">(${resources.offCount})</span></td>
-          </tr>
-          <tr>
-            <th>${escapeHtml(t('host.memoryLabel'))}</th>
-            <td>${escapeHtml(formatMiB(resources.totalMemMB))}</td>
-            <td>${escapeHtml(formatMiB(resources.usedMemMB))} <span class="muted">(${resources.runningCount})</span></td>
-            <td>${escapeHtml(formatMiB(resources.assignedOffMemMB))} <span class="muted">(${resources.offCount})</span></td>
-          </tr>
-        </tbody>
+        <tr>
+          <th>${escapeHtml(t('host.resVcpus'))}</th>
+          <td>${resources.runCpus} / ${resources.allCpus} vCPU
+            <span class="muted">(${escapeHtml(t('host.resRunningAllHint', { count: resources.totalCount }))}; ${escapeHtml(t('host.resHost'))} ${resources.hostCores})</span></td>
+        </tr>
+        <tr>
+          <th>${escapeHtml(t('host.memoryLabel'))}</th>
+          <td>${escapeHtml(formatMiB(resources.runMemMB))} / ${escapeHtml(formatMiB(resources.allMemMB))}
+            <span class="muted">(${escapeHtml(t('host.resRunningAllHint', { count: resources.totalCount }))}; ${escapeHtml(t('host.resHost'))} ${escapeHtml(formatMiB(resources.hostMemMB))})</span></td>
+        </tr>
       </table>`
     : `<p class="muted">${escapeHtml(t('host.resUnreadable'))}</p>`;
 
@@ -123,7 +112,6 @@ function hostPage({ info, resources = { available: false }, username = '', lang 
         <tr><th>${escapeHtml(t('host.os'))}</th><td>${escapeHtml(osPrettyName || platform)}</td></tr>
         <tr><th>${escapeHtml(t('host.kernel'))}</th><td>${escapeHtml(kernelRelease)} (${escapeHtml(arch)})</td></tr>
         <tr><th>VirtualBox</th><td>${vboxVersionHtml}</td></tr>
-        <tr><th>${escapeHtml(t('host.cpuVirt'))}</th><td>${kvmStatusHtml}</td></tr>
       </table>
     </div>
 
