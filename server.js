@@ -16,8 +16,6 @@ const config = require('./config/config.json');
 // repo was cloned (no JSON equivalent of __dirname).
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
-const AUDIT_LOG_FILE = path.join(DATA_DIR, 'audit.log');
 const { Router } = require('./lib/router');
 const auth = require('./lib/auth');
 const i18n = require('./lib/i18n');
@@ -1617,22 +1615,20 @@ function handleError(err, res) {
 
 const server = http.createServer(handleRequest);
 
-// Ensure the data directory exists with restrictive permissions before we
-// start serving. config.json holds the admin password hash, so this dir must
-// not be world/group readable. Best-effort: log but don't crash if chmod
-// fails (e.g. unusual ownership).
-function ensureDataDirPerms() {
+// Ensure the data directory exists before we start serving. Its permissions
+// (0700, owned by the app user) are set once at install time - see
+// config/systemd_install.sh - so we do NOT re-chmod them here: that failed
+// with EPERM whenever data/ is owned by a different user than the service
+// runs as, and it's redundant with the install step. mode below applies only
+// when the directory is newly created.
+function ensureDataDir() {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
-    fs.chmodSync(DATA_DIR, 0o700);
-    for (const f of [CONFIG_FILE, AUDIT_LOG_FILE]) {
-      if (fs.existsSync(f)) fs.chmodSync(f, 0o600);
-    }
   } catch (err) {
-    console.warn('Warning: could not enforce data/ permissions:', err.message);
+    console.warn('Warning: could not create data/ directory:', err.message);
   }
 }
-ensureDataDirPerms();
+ensureDataDir();
 
 auth.startSessionSweeper();
 loginLimiter.startSweeper();
