@@ -44,8 +44,7 @@ function moduleRows(modules, checkable, t) {
       } else {
         statusHtml = `<span class="badge badge-stopped">${escapeHtml(t('host.notLoaded'))}</span>`;
       }
-      const tag = m.required ? ` <span class="muted">(${escapeHtml(t('host.required'))})</span>`
-        : m.conflict ? ` <span class="muted">(${escapeHtml(t('host.mustUnload'))})</span>` : '';
+      const tag = m.required ? ` <span class="muted">(${escapeHtml(t('host.required'))})</span>` : '';
       return `
       <tr>
         <td><code>${escapeHtml(m.name)}</code></td>
