@@ -109,6 +109,18 @@ const BASE_CSS = `
   .badge-stopped { background: #f3f4f6; color: #4b5563; }
   .badge-missing { background: #fee2e2; color: #b91c1c; }
   .badge-unknown { background: #fef9c3; color: #854d0e; }
+  .res-row { margin: 0 0 0.95rem; }
+  .res-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.9rem; margin-bottom: 0.3rem; gap: 1rem; }
+  .res-head .res-label { font-weight: 600; color: #374151; }
+  .res-head .res-val { color: #1a1a1a; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .res-bar { position: relative; display: flex; gap: 2px; height: 14px; background: #eef0f2; border-radius: 7px; overflow: hidden; }
+  .res-seg { height: 100%; }
+  .res-seg-run { background: #2a78d6; }
+  .res-seg-assigned { background: #eb6834; }
+  .res-cap { position: absolute; top: 0; bottom: 0; width: 2px; background: #111827; opacity: 0.5; }
+  .res-legend { display: flex; flex-wrap: wrap; gap: 1.1rem; font-size: 0.8rem; color: #555; margin-top: 0.1rem; }
+  .res-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.35rem; vertical-align: middle; }
+  .res-legend .cap-key { display: inline-block; width: 2px; height: 11px; background: #111827; opacity: 0.6; margin-right: 0.35rem; vertical-align: middle; }
   .btn-sm { margin: 0 0.2rem 0 0; padding: 0.3rem 0.7rem; font-size: 0.85rem; }
   .btn-warn { background: #dc2626; }
   .btn-warn:hover { background: #b91c1c; }

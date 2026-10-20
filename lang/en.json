@@ -71,6 +71,8 @@
   "host.mustUnload": "must be unloaded",
   "host.resVcpus": "vCPUs",
   "host.resHost": "host",
+  "host.resInUse": "In use (running)",
+  "host.resAssigned": "Assigned (stopped)",
   "host.resRunningAllHint": "running / all {count} VMs",
   "host.cpuVirt": "CPU virtualization",
   "host.kvmFree": "KVM not loaded",

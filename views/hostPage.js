@@ -55,11 +55,29 @@ function moduleRows(modules, checkable, t) {
     .join('');
 }
 
+// One resource usage bar: a blue "in use" (running) segment + an orange
+// "assigned" (stopped VMs) segment, scaled so both always fit even when the
+// VMs overcommit the host, with a marker showing the host's physical capacity.
+function resourceBar(label, run, assigned, cap, valueHtml, inUseText, assignedText, tr) {
+  const total = run + assigned;
+  const scale = Math.max(cap, total, 1);
+  const pct = (n) => `${(n / scale) * 100}%`;
+  const capPct = `${Math.min((cap / scale) * 100, 100)}%`;
+  return `
+    <div class="res-row">
+      <div class="res-head"><span class="res-label">${escapeHtml(label)}</span><span class="res-val">${valueHtml}</span></div>
+      <div class="res-bar" role="img" aria-label="${escapeHtml(inUseText)}; ${escapeHtml(assignedText)}">
+        ${run > 0 ? `<div class="res-seg res-seg-run" style="width:${pct(run)}" title="${escapeHtml(inUseText)}"></div>` : ''}
+        ${assigned > 0 ? `<div class="res-seg res-seg-assigned" style="width:${pct(assigned)}" title="${escapeHtml(assignedText)}"></div>` : ''}
+        <div class="res-cap" style="left:${capPct}" title="${escapeHtml(tr('host.resHost'))}: ${escapeHtml(String(cap))}"></div>
+      </div>
+    </div>`;
+}
+
 function hostPage({ info, resources = { available: false }, username = '', lang = 'en' }) {
   const {
     now, timezone, uptimeSeconds, hostname, runningAs, platform, kernelRelease, arch,
     osPrettyName, vboxVersion, modules, modulesCheckable, requiredMissing,
-    kvmLoaded, kvmModules,
   } = info;
   const t = (key, vars) => i18n.t(lang, key, vars);
 
@@ -67,40 +85,35 @@ function hostPage({ info, resources = { available: false }, username = '', lang 
     ? `<code>${escapeHtml(vboxVersion)}</code>`
     : `<span class="error">${escapeHtml(t('host.vboxUnreachable'))}</span>`;
 
-  const kvmModList = (kvmModules || []).join(', ');
   const requiredMissingBanner = requiredMissing
     ? `<p class="error">${t('host.requiredMissingBanner')}</p>`
     : '';
-  // KVM holds VT-x/AMD-V when loaded, blocking every VM start - keep the loud
-  // banner (the per-module status now also shows in the kernel-modules table).
-  const kvmConflictBanner = kvmLoaded
-    ? `<p class="error">${t('host.kvmConflictBanner', { modules: escapeHtml(kvmModList) })}</p>`
-    : '';
 
-  // "running / all registered" totals, e.g. "10 / 12 vCPUs". hostCores/hostMemMB
-  // shown as muted context below each.
-  const resourcesHtml = resources.available
-    ? `
-      <table class="kv">
-        <tr>
-          <th>${escapeHtml(t('host.resVcpus'))}</th>
-          <td>${resources.runCpus} / ${resources.allCpus} vCPU
-            <span class="muted">(${escapeHtml(t('host.resRunningAllHint', { count: resources.totalCount }))}; ${escapeHtml(t('host.resHost'))} ${resources.hostCores})</span></td>
-        </tr>
-        <tr>
-          <th>${escapeHtml(t('host.memoryLabel'))}</th>
-          <td>${escapeHtml(formatMiB(resources.runMemMB))} / ${escapeHtml(formatMiB(resources.allMemMB))}
-            <span class="muted">(${escapeHtml(t('host.resRunningAllHint', { count: resources.totalCount }))}; ${escapeHtml(t('host.resHost'))} ${escapeHtml(formatMiB(resources.hostMemMB))})</span></td>
-        </tr>
-      </table>`
-    : `<p class="muted">${escapeHtml(t('host.resUnreadable'))}</p>`;
+  // Colored "in use / assigned" bars, scaled to host capacity (shown as a
+  // marker). Values read "running / all registered", e.g. "10 / 12 vCPU".
+  let resourcesHtml;
+  if (resources.available) {
+    const r = resources;
+    const cpuVal = `${r.runCpus} / ${r.allCpus} vCPU <span class="muted">· ${escapeHtml(t('host.resHost'))} ${r.hostCores}</span>`;
+    const memVal = `${escapeHtml(formatMiB(r.runMemMB))} / ${escapeHtml(formatMiB(r.allMemMB))} <span class="muted">· ${escapeHtml(t('host.resHost'))} ${escapeHtml(formatMiB(r.hostMemMB))}</span>`;
+    resourcesHtml = `
+      ${resourceBar(t('host.resVcpus'), r.runCpus, r.allCpus - r.runCpus, r.hostCores,
+        cpuVal, `${t('host.resInUse')}: ${r.runCpus} vCPU`, `${t('host.resAssigned')}: ${r.allCpus - r.runCpus} vCPU`, t)}
+      ${resourceBar(t('host.memoryLabel'), r.runMemMB, r.allMemMB - r.runMemMB, r.hostMemMB,
+        memVal, `${t('host.resInUse')}: ${formatMiB(r.runMemMB)}`, `${t('host.resAssigned')}: ${formatMiB(r.allMemMB - r.runMemMB)}`, t)}
+      <div class="res-legend">
+        <span><span class="dot" style="background:#2a78d6"></span>${escapeHtml(t('host.resInUse'))}</span>
+        <span><span class="dot" style="background:#eb6834"></span>${escapeHtml(t('host.resAssigned'))}</span>
+        <span><span class="cap-key"></span>${escapeHtml(t('host.resHost'))}</span>
+      </div>`;
+  } else {
+    resourcesHtml = `<p class="muted">${escapeHtml(t('host.resUnreadable'))}</p>`;
+  }
 
   const body = `
     <div class="card">
       <h1>${escapeHtml(t('host.title'))}</h1>
-      <p class="muted">${escapeHtml(t('host.subtitle'))}</p>
       ${requiredMissingBanner}
-      ${kvmConflictBanner}
 
       <table class="kv">
         <tr><th>${escapeHtml(t('host.software'))}</th><td><a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(PRODUCT_NAME)}</a> <span class="muted">v${escapeHtml(VERSION)}</span> <span class="muted">(${escapeHtml(REPO_URL.replace('https://', ''))})</span></td></tr>
